@@ -1,0 +1,124 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$cyan-palette,
+        tertiary: mat.$green-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Estructura de página */
+.seccion {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.seccion-titulo {
+  margin: 0 0 8px;
+  font: var(--mat-sys-headline-medium);
+}
+
+.seccion-sub {
+  margin: 0 0 24px;
+  opacity: 0.75;
+  max-width: 720px;
+}
+
+.tarjetas {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.formulario {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+  .ancho-completo {
+    grid-column: 1 / -1;
+  }
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tabla-contenedor {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-lowest);
+  box-shadow: var(--mat-sys-level1);
+
+  table {
+    width: 100%;
+  }
+}
+
+.vacio {
+  padding: 40px 16px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip-ok { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
+.chip-aviso { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.chip-error { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+.chip-neutro { background: var(--mat-sys-surface-variant); color: var(--mat-sys-on-surface-variant); }
+
+.snack-error {
+  --mat-snack-bar-container-color: var(--mat-sys-error);
+  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error);
+  --mat-snack-bar-button-color: var(--mat-sys-on-error);
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.texto-error { color: var(--mat-sys-error); }
+
+@media print {
+  .barra, .pie, .no-imprimir { display: none !important; }
+}

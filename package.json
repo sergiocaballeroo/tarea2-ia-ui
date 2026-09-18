@@ -1,0 +1,41 @@
+{
+  "name": "tarea2-ia-ui",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve biblioteca --open",
+    "build": "ng build biblioteca && ng build clinica",
+    "start:biblioteca": "ng serve biblioteca --open",
+    "start:clinica": "ng serve clinica --port 4300 --open",
+    "build:pages": "ng build biblioteca --base-href /tarea2-ia-ui/biblioteca/ && ng build clinica --base-href /tarea2-ia-ui/clinica/ && node scripts/ensamblar-pages.mjs",
+    "preview": "node scripts/servir-local.mjs",
+    "capturas": "node scripts/capturas.mjs"
+  },
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "dependencies": {
+    "@angular/cdk": "^21.2.14",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/material": "^21.2.14",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@angular/service-worker": "^21.2.0",
+    "dexie": "^4.4.6",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.24",
+    "@angular/cli": "^21.2.24",
+    "@angular/compiler-cli": "^21.2.0",
+    "playwright": "^1.63.0",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
