@@ -93,12 +93,12 @@ import { EstadoPrestamoPipe } from '../prestamos/estado-prestamo.pipe';
   `,
   styles: `
     h2 { margin: 8px 0 0; font: var(--mat-sys-title-large); }
-    .tarjeta { cursor: pointer; transition: transform .15s; }
-    .tarjeta:hover { transform: translateY(-2px); }
+    .tarjeta { cursor: pointer; }
+    .tarjeta:hover { border-color: var(--mat-sys-primary); }
     .tarjeta mat-card-content { display: grid; gap: 4px; }
-    .tarjeta mat-icon { font-size: 28px; width: 28px; height: 28px; color: var(--mat-sys-primary); }
+    .tarjeta mat-icon { font-size: 22px; width: 22px; height: 22px; color: #6f6f6f; }
     .tarjeta mat-icon.alerta { color: var(--mat-sys-error); }
-    .valor { font: var(--mat-sys-headline-medium); font-weight: 600; }
+    .valor { font: var(--mat-sys-headline-medium); font-weight: 500; }
     .texto { opacity: .75; }
     .bienvenida { display: flex; gap: 12px; align-items: center; }
     .bienvenida mat-icon { color: var(--mat-sys-tertiary); }

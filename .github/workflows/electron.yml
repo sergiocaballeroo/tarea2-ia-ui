@@ -1,0 +1,72 @@
+# Compila la aplicación de escritorio (Electron) para Windows, macOS y Linux y publica los
+# instaladores en GitHub Releases. Se ejecuta al crear una etiqueta v* o manualmente.
+name: Instaladores de escritorio (Electron)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar Angular y empaquetar con electron-builder
+        run: npm run electron:dist
+        env:
+          # Sin firma de código: los instaladores se publican tal cual (aviso de SmartScreen / Gatekeeper).
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Subir instaladores como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: biblioteca-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Publicar en Releases
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Descargar artefactos
+        uses: actions/download-artifact@v4
+        with:
+          path: instaladores
+          merge-multiple: true
+
+      - name: Crear release con los instaladores
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Biblioteca ${{ github.ref_name }}
+          body: |
+            Aplicación de escritorio de gestión de préstamos (Tarea 2).
+            Descarga el instalador de tu sistema operativo y ábrelo:
+            - Windows: archivo .exe (si SmartScreen avisa, elige "Más información" y "Ejecutar de todas formas").
+            - macOS: archivo .dmg (clic derecho sobre la app y "Abrir" la primera vez).
+            - Linux: archivo .AppImage (dar permiso de ejecución: chmod +x).
+          files: instaladores/*

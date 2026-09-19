@@ -91,19 +91,19 @@ interface BeforeInstallPromptEvent extends Event {
   `,
   styles: `
     .contenedor { height: 100vh; }
-    .menu { width: 260px; display: flex; flex-direction: column; }
+    .menu { width: 240px; display: flex; flex-direction: column; border-right: 1px solid #e3e3e3; background: #fff; }
     .marca { display: flex; gap: 12px; align-items: center; padding: 20px 16px 12px; }
     .marca mat-icon { font-size: 36px; width: 36px; height: 36px; color: var(--mat-sys-primary); }
     .marca-titulo { font-weight: 600; }
     .marca-sub { font-size: 12px; opacity: .7; }
     .menu-pie { margin-top: auto; padding: 16px; display: grid; gap: 8px; font-size: 12px; opacity: .85; }
-    .badge-vencidos { background: var(--mat-sys-error); color: var(--mat-sys-on-error); border-radius: 12px; padding: 0 8px; font-size: 12px; }
-    .barra { position: sticky; top: 0; z-index: 2; }
+    .badge-vencidos { background: #fdeeee; color: #a3262c; border: 1px solid #f2c9cb; border-radius: 6px; padding: 0 7px; font-size: 12px; }
+    .barra { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid #e3e3e3; }
     .barra-titulo { margin-left: 8px; }
     .espacio { flex: 1; }
     .fecha { font-size: 14px; opacity: .8; }
     .contenido { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    a.activo { background: var(--mat-sys-secondary-container); }
+    a.activo { background: #eef3fb; }
   `,
 })
 export class App {

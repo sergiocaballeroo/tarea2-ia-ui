@@ -1,6 +1,6 @@
 {
   "name": "tarea2-ia-ui",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve biblioteca",
@@ -9,7 +9,10 @@
     "start:clinica": "ng serve clinica --port 4300",
     "build:pages": "ng build biblioteca --base-href /tarea2-ia-ui/biblioteca/ && ng build clinica --base-href /tarea2-ia-ui/clinica/ && node scripts/ensamblar-pages.mjs",
     "preview": "node scripts/servir-local.mjs",
-    "capturas": "node scripts/capturas.mjs"
+    "capturas": "node scripts/capturas.mjs",
+    "build:electron": "ng build biblioteca --configuration production --base-href ./",
+    "electron": "npm run build:electron && electron .",
+    "electron:dist": "npm run build:electron && electron-builder --publish never"
   },
   "private": true,
   "packageManager": "npm@10.9.2",
@@ -31,11 +34,74 @@
     "@angular/build": "^21.2.24",
     "@angular/cli": "^21.2.24",
     "@angular/compiler-cli": "^21.2.0",
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
     "playwright": "^1.63.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   },
   "engines": {
     "node": ">=20.19.0"
+  },
+  "main": "electron/main.cjs",
+  "description": "Tarea 2: biblioteca (escritorio) y clinica (web) generadas con Claude Code",
+  "author": "Sergio Jair Caballero Martinez",
+  "build": {
+    "appId": "mx.unam.tarea2.biblioteca",
+    "productName": "Biblioteca",
+    "copyright": "2026 Sergio Jair Caballero Martinez",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/biblioteca/browser/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Biblioteca-${version}-Windows-Setup.${ext}",
+      "shortcutName": "Biblioteca"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.education",
+      "artifactName": "Biblioteca-${version}-macOS.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Office",
+      "artifactName": "Biblioteca-${version}-Linux.${ext}"
+    }
   }
 }

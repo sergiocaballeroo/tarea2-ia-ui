@@ -40,7 +40,7 @@ import { ESPECIALIDADES, MEDICOS } from '../../core/datos-clinica';
     .lista { display: grid; gap: 16px; }
     .servicio { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 20px; }
     @media (max-width: 700px) { .servicio { grid-template-columns: 1fr; } }
-    .icono { width: 64px; height: 64px; border-radius: 16px; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); display: grid; place-items: center; }
+    .icono { width: 56px; height: 56px; border-radius: 12px; background: #e8f4f6; color: #0b5a63; display: grid; place-items: center; }
     .icono mat-icon { font-size: 32px; width: 32px; height: 32px; }
     h2 { margin: 0 0 4px; font: var(--mat-sys-title-large); }
     .cuerpo p { margin: 0 0 8px; opacity: .8; }

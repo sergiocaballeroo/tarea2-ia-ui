@@ -146,7 +146,7 @@ import { MEDICOS, especialidadDe, medicoDe } from '../../core/datos-clinica';
   styles: `
     .encabezado { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start; }
     .encabezado .seccion-sub { margin-bottom: 8px; }
-    .aviso-demo { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--mat-sys-surface-container); font-size: 14px; margin-bottom: 16px; }
+    .aviso-demo { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: #fff; border: 1px solid #e3e3e3; font-size: 14px; margin-bottom: 16px; }
     .filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
     .navegacion-fecha { display: flex; align-items: center; gap: 4px; }
     .buscador { min-width: 220px; }

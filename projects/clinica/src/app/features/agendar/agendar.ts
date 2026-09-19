@@ -187,16 +187,16 @@ import { Cita, aISO, fechaLarga, sumarDias, hoyISO, deISO } from '../../core/mod
     .estrecha { max-width: 860px; }
     .pasos { background: transparent; }
     .opciones { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-bottom: 12px; }
-    .opcion { display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 12px; border: 2px solid var(--mat-sys-outline-variant); background: var(--mat-sys-surface-container-lowest); cursor: pointer; font: inherit; color: inherit; }
+    .opcion { display: flex; gap: 12px; align-items: center; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid #e3e3e3; background: #fff; cursor: pointer; font: inherit; color: inherit; }
     .opcion:hover { border-color: var(--mat-sys-primary); }
-    .opcion.seleccionada { border-color: var(--mat-sys-primary); background: var(--mat-sys-primary-container); }
+    .opcion.seleccionada { border-color: var(--mat-sys-primary); background: #e8f4f6; }
     .opcion mat-icon { color: var(--mat-sys-primary); }
     .opcion small { display: block; opacity: .7; }
     .opcion .avatar { width: 44px; height: 44px; font-size: 15px; }
     .fecha-hora { display: grid; gap: 16px; margin-bottom: 8px; padding-top: 8px; }
     .horarios-titulo { font-weight: 500; margin-bottom: 8px; }
     .grid-horas { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
-    .hora { padding: 10px 0; border-radius: 8px; border: 1px solid var(--mat-sys-outline-variant); background: var(--mat-sys-surface-container-lowest); cursor: pointer; font: inherit; color: inherit; }
+    .hora { padding: 10px 0; border-radius: 8px; border: 1px solid #e3e3e3; background: #fff; cursor: pointer; font: inherit; color: inherit; }
     .hora.seleccionada { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-color: var(--mat-sys-primary); }
     .hora.ocupada { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
     .resumen { margin: 12px 0; }

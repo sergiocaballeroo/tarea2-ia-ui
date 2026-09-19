@@ -48,3 +48,6 @@ Thumbs.db
 
 # El reporte escolar se entrega aparte y no forma parte del repositorio
 /reporte
+
+# Instaladores de Electron generados localmente
+/release

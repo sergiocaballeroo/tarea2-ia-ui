@@ -140,3 +140,18 @@ pestaña Design de claude.ai (mismo enunciado que la implementación con Claude 
 
 Captura esperada: `evidencias/capturas/c12-claude-design.png`. Si existe, el generador del reporte la
 incluye automáticamente en la ficha de Claude Design.
+
+## Fase 5. Aplicación de escritorio nativa con Electron
+
+El 2026-09-18, al releer el enunciado ("aplicación de escritorio"), se decidió reforzar el Ejercicio 1B
+empaquetando la biblioteca con Electron además de la PWA. Prompt efectivo:
+
+> Empaqueta la app Angular biblioteca con Electron: proceso principal con ventana nativa, menú en
+> español, sin integración de Node en la página, cargando el build con base-href relativo. Configura
+> electron-builder para generar instaladores de Windows (NSIS), macOS (DMG) y Linux (AppImage), y un
+> workflow de GitHub Actions con matriz de los tres sistemas que publique los instaladores en Releases
+> al crear una etiqueta de versión.
+
+Archivos generados: `electron/main.cjs`, sección `build` y scripts `electron`, `electron:dist`,
+`build:electron` en `package.json`, `.github/workflows/electron.yml`, `build/icon.png`. Ajuste en
+`app.config.ts` para no registrar el service worker cuando la app corre desde `file://`.

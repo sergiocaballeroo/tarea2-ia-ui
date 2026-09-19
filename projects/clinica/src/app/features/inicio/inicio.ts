@@ -67,16 +67,16 @@ import { CLINICA, ESPECIALIDADES } from '../../core/datos-clinica';
     </section>
   `,
   styles: `
-    .hero { background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-surface)); }
+    .hero { background: #fff; border-bottom: 1px solid #e3e3e3; }
     .hero-interna { max-width: 1200px; margin: 0 auto; padding: 56px 16px; display: grid; gap: 32px; grid-template-columns: 1.2fr 1fr; align-items: center; }
     @media (max-width: 800px) { .hero-interna { grid-template-columns: 1fr; } .hero-visual { display: none; } }
-    .etiqueta { display: inline-block; padding: 4px 12px; border-radius: 16px; background: var(--mat-sys-surface-container-lowest); color: var(--mat-sys-primary); font-size: 13px; font-weight: 500; }
-    h1 { font: var(--mat-sys-display-small); margin: 16px 0; }
+    .etiqueta { display: inline-block; padding: 3px 10px; border-radius: 6px; background: #e8f4f6; color: #0b5a63; font-size: 13px; font-weight: 500; }
+    h1 { font: var(--mat-sys-display-small); font-weight: 500; letter-spacing: -0.5px; margin: 16px 0; }
     .hero-texto p { font-size: 17px; line-height: 1.6; max-width: 560px; }
     .datos { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; font-size: 14px; opacity: .85; }
     .datos span { display: inline-flex; align-items: center; gap: 6px; }
     .hero-visual { position: relative; height: 320px; }
-    .burbuja { position: absolute; width: 96px; height: 96px; border-radius: 50%; background: var(--mat-sys-surface-container-lowest); box-shadow: var(--mat-sys-level2); display: grid; place-items: center; color: var(--mat-sys-primary); }
+    .burbuja { position: absolute; width: 96px; height: 96px; border-radius: 50%; background: #fafafa; border: 1px solid #e3e3e3; display: grid; place-items: center; color: var(--mat-sys-primary); }
     .burbuja mat-icon { font-size: 40px; width: 40px; height: 40px; }
     .b1 { top: 10%; left: 10%; } .b2 { top: 5%; right: 15%; width: 72px; height: 72px; } .b3 { bottom: 15%; left: 25%; width: 80px; height: 80px; }
     .b4 { bottom: 10%; right: 10%; } .b5 { top: 40%; left: 48%; width: 120px; height: 120px; color: var(--mat-sys-error); }
@@ -86,10 +86,10 @@ import { CLINICA, ESPECIALIDADES } from '../../core/datos-clinica';
     .servicio p { margin: 0; opacity: .8; }
     .icono { font-size: 36px; width: 36px; height: 36px; color: var(--mat-sys-primary); }
     .pasos { padding-bottom: 8px; }
-    .paso { padding: 16px; border-radius: 12px; background: var(--mat-sys-surface-container); }
+    .paso { padding: 16px; border-radius: 10px; background: #fff; border: 1px solid #e3e3e3; }
     .paso h3 { margin: 8px 0 4px; font: var(--mat-sys-title-medium); }
     .paso p { margin: 0; opacity: .8; }
-    .numero { width: 36px; height: 36px; border-radius: 50%; background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); display: grid; place-items: center; font-weight: 600; }
+    .numero { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--mat-sys-primary); color: var(--mat-sys-primary); display: grid; place-items: center; font-weight: 500; }
   `,
 })
 export class Inicio {

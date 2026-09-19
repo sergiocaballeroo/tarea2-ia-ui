@@ -88,13 +88,13 @@ import { CLINICA } from './core/datos-clinica';
   `,
   styles: `
     .contenedor { min-height: 100vh; }
-    .barra { position: sticky; top: 0; z-index: 10; background: var(--mat-sys-surface-container-lowest); box-shadow: var(--mat-sys-level1); }
+    .barra { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid #e3e3e3; }
     .barra-interna { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 1200px; margin: 0 auto; }
     .marca { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--mat-sys-primary); font-weight: 600; }
     .espacio { flex: 1; }
     .enlaces a.activo { color: var(--mat-sys-primary); font-weight: 600; }
     .contenido { min-height: 70vh; }
-    .pie { background: var(--mat-sys-surface-container); padding: 32px 16px 16px; margin-top: 48px; font-size: 14px; }
+    .pie { background: #fff; border-top: 1px solid #e3e3e3; padding: 32px 16px 16px; margin-top: 48px; font-size: 14px; }
     .pie-interna { max-width: 1200px; margin: 0 auto; display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     .pie-enlaces { display: grid; gap: 8px; align-content: start; }
     .pie a { color: var(--mat-sys-primary); }

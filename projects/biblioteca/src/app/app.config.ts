@@ -23,7 +23,8 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es-MX' },
     { provide: MAT_DATE_LOCALE, useValue: 'es-MX' },
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
+      // En Electron la app se abre desde file:// y no aplica el service worker.
+      enabled: !isDevMode() && typeof location !== 'undefined' && location.protocol.startsWith('http'),
       registrationStrategy: 'registerWhenStable:30000',
     }),
   ],
