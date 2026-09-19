@@ -1,4 +1,4 @@
-# Resultado de pruebas funcionales (2026-09-19 03:27)
+# Resultado de pruebas funcionales (2026-09-19 03:57)
 
 82 de 82 pruebas pasaron.
 
@@ -72,7 +72,7 @@
 | B47 Dos pestañas: el segundo préstamo del último ejemplar se rechaza | OK |  |
 | B48 Los datos de una pestaña aparecen en la otra sin recargar (liveQuery) | OK |  |
 | B49 Enter en el diálogo registra y Escape lo cierra sin guardar | OK |  |
-| B50 PWA: tras la primera carga la biblioteca abre sin conexión | OK |  |
+| B50 PWA: cerrar la pestaña y volver sin conexión abre la biblioteca con sus datos | OK |  |
 | C20 Cambiar de especialidad reinicia médico, fecha y hora | OK |  |
 | C21 Enlaces de Servicios y Equipo preseleccionan especialidad y médico | OK |  |
 | C22 Nombre o motivo con solo espacios no se aceptan | OK |  |

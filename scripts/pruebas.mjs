@@ -108,9 +108,15 @@ async function cerrarSnacks(p) {
   const botones = p.locator('.mat-mdc-snack-bar-action');
   for (let i = await botones.count(); i > 0; i--) await botones.first().click({ timeout: 1000 }).catch(() => {});
 }
+/** Navega y espera a que el componente de esa ruta esté en pantalla (con hash routing no hay recarga y el
+ *  componente anterior sigue visible mientras se descarga el chunk de la nueva ruta). */
 async function ir(p, url) {
   await p.goto(url, { waitUntil: 'load', timeout: 20000 });
-  await p.locator('router-outlet + *').first().waitFor({ timeout: 20000 });
+  const ruta = (url.split('#/')[1] ?? '').split('?')[0].split('/')[0];
+  const esBib = url.includes('/biblioteca/');
+  const conocidas = ['libros', 'socios', 'prestamos', 'vencidos', 'ajustes', 'servicios', 'equipo', 'contacto', 'agendar', 'mis-citas', 'recepcion'];
+  const componente = !ruta ? (esBib ? 'app-dashboard' : 'app-inicio') : conocidas.includes(ruta) ? `app-${ruta}` : '*';
+  await p.locator(`router-outlet + ${componente}`).first().waitFor({ timeout: 20000 });
 }
 /** Texto de un elemento con espacios normalizados (la plantilla genera saltos y espacios dobles). */
 async function texto(loc) {
@@ -1283,18 +1289,32 @@ await prueba('B49 Enter en el diálogo registra y Escape lo cierra sin guardar',
   await p.getByText('1 de 1 socios').waitFor();
 });
 
-await prueba('B50 PWA: tras la primera carga la biblioteca abre sin conexión', async (p) => {
+await prueba('B50 PWA: cerrar la pestaña y volver sin conexión abre la biblioteca con sus datos', async (p) => {
   await ir(p, `${BIB}/`);
   await p.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
-  // ngsw termina de cachear los recursos poco después de registrarse.
-  await p.waitForFunction(() => caches.keys().then((k) => k.some((x) => x.startsWith('ngsw'))), null, { timeout: 15000 });
-  await p.waitForTimeout(1500);
+  // El service worker de Angular precarga los archivos del manifiesto (ngsw.json) tras activarse;
+  // se le da el tiempo que tardaría un uso normal de la app antes de cerrar la pestaña.
+  await p.waitForFunction(
+    async () => {
+      const manifiesto = await fetch('ngsw.json').then((r) => r.json());
+      const cache = (await caches.keys()).find((n) => n.endsWith(':assets:app:cache'));
+      return !!cache && (await (await caches.open(cache)).keys()).length >= manifiesto.assetGroups[0].urls.length;
+    },
+    null,
+    { timeout: 90000, polling: 1000 },
+  );
   await cargarDemo(p);
+  await p.waitForTimeout(15000);
+  // El usuario cierra la pestaña y más tarde vuelve a abrir la app sin internet.
+  await p.close();
+  await new Promise((r) => setTimeout(r, 10000));
   await contexto.setOffline(true);
   try {
-    await p.goto(`${BIB}/libros`, { waitUntil: 'load', timeout: 20000 });
-    await p.reload({ waitUntil: 'load', timeout: 20000 });
-    await p.getByText('10 de 10 títulos').waitFor({ timeout: 15000 });
+    const p2 = await contexto.newPage();
+    await p2.goto(`${BIB}/libros`, { waitUntil: 'load', timeout: 20000 });
+    await p2.getByText('10 de 10 títulos').waitFor({ timeout: 15000 });
+    assert.equal(await p2.title(), 'Libros | Biblioteca');
+    await p2.close();
   } finally {
     await contexto.setOffline(false);
   }
