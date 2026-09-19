@@ -6,7 +6,8 @@
  *   npm run build:pages      (una vez, para tener _site actualizado)
  *   npm run pruebas          -> imprime el resultado y deja capturas de las fallas en evidencias/pruebas/
  *
- * Opcional: PRUEBA=<texto> npm run pruebas   corre solo las pruebas cuyo nombre contenga el texto.
+ * Opcional: PRUEBA=<regex> npm run pruebas   corre solo las pruebas cuyo nombre coincida.
+ *           BASE=<url> npm run pruebas      corre contra otra URL (p. ej. el sitio publicado en GitHub Pages).
  */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
@@ -19,15 +20,15 @@ const salida = resolve(raiz, 'evidencias/pruebas');
 mkdirSync(salida, { recursive: true });
 
 const puerto = 8091;
-const base = `http://localhost:${puerto}/tarea2-ia-ui`;
+// BASE=https://sergiocaballeroo.github.io/tarea2-ia-ui npm run pruebas   -> prueba el sitio publicado
+const base = (process.env.BASE ?? `http://localhost:${puerto}/tarea2-ia-ui`).replace(/\/$/, '');
 const BIB = `${base}/biblioteca/#`;
 const CLI = `${base}/clinica/#`;
 
-const servidor = spawn(process.execPath, [resolve(raiz, 'scripts/servir-local.mjs')], {
-  env: { ...process.env, PORT: String(puerto) },
-  stdio: 'ignore',
-});
-await new Promise((r) => setTimeout(r, 1200));
+const servidor = process.env.BASE
+  ? null
+  : spawn(process.execPath, [resolve(raiz, 'scripts/servir-local.mjs')], { env: { ...process.env, PORT: String(puerto) }, stdio: 'ignore' });
+if (servidor) await new Promise((r) => setTimeout(r, 1200));
 
 // ---------- utilidades de fechas (mismas reglas que las apps) ----------
 function aISO(d) {
@@ -61,11 +62,11 @@ function proximaFecha(dias, desde = hoyISO(), saltar = 0) {
 // ---------- mini arnés de pruebas ----------
 const navegador = await chromium.launch();
 const resultados = [];
-const filtro = process.env.PRUEBA ?? '';
+const filtro = process.env.PRUEBA ? new RegExp(process.env.PRUEBA, 'i') : null;
 let contexto, pagina, erroresConsola;
 
 async function prueba(nombre, fn, opciones = {}) {
-  if (filtro && !nombre.toLowerCase().includes(filtro.toLowerCase())) return;
+  if (filtro && !filtro.test(nombre)) return;
   contexto = await navegador.newContext({
     viewport: opciones.viewport ?? { width: 1366, height: 820 },
     locale: 'es-MX',
@@ -809,9 +810,10 @@ async function cargarDemoClinica(p) {
   await ir(p, `${CLI}/recepcion`);
   await p.getByRole('button', { name: 'Más opciones' }).click();
   await p.getByRole('menuitem', { name: /Cargar citas de demostración/ }).click();
-  const texto = await esperarSnack(p, 'citas de demostración cargadas');
+  const t = await esperarSnack(p, 'citas de demostración cargadas');
   await cerrarSnacks(p);
-  return Number(texto.match(/(\d+) citas/)[1]);
+  await p.waitForTimeout(300);
+  return Number(t.match(/(\d+) citas/)[1]);
 }
 
 await prueba('C12 Recepción: demo carga citas y el panel muestra las de hoy con resumen', async (p) => {
@@ -938,9 +940,600 @@ await prueba('C19 Ruta desconocida redirige al inicio', async (p) => {
   await p.getByText('Atención médica cercana').first().waitFor();
 });
 
+
+// ---------- segunda ronda: casos límite, entradas raras, concurrencia, PWA ----------
+
+/** Inserta registros directamente en IndexedDB (la app debe haber abierto la base antes). */
+async function insertarEnIDB(p, nombreDB, tabla, registros) {
+  await p.evaluate(
+    ([nombreDB, tabla, registros]) =>
+      new Promise((res, rej) => {
+        const req = indexedDB.open(nombreDB);
+        req.onerror = () => rej(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction(tabla, 'readwrite');
+          const st = tx.objectStore(tabla);
+          for (const r of registros) st.add(r);
+          tx.oncomplete = () => { db.close(); res(); };
+          tx.onerror = () => rej(tx.error);
+        };
+      }),
+    [nombreDB, tabla, registros],
+  );
+}
+async function leerIDB(p, nombreDB, tabla) {
+  return p.evaluate(
+    ([nombreDB, tabla]) =>
+      new Promise((res, rej) => {
+        const req = indexedDB.open(nombreDB);
+        req.onerror = () => rej(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const q = db.transaction(tabla).objectStore(tabla).getAll();
+          q.onsuccess = () => { db.close(); res(q.result); };
+          q.onerror = () => rej(q.error);
+        };
+      }),
+    [nombreDB, tabla],
+  );
+}
+/** Elige una fecha (pasada o futura) navegando el calendario de Material que ya está abierto. */
+async function elegirEnCalendario(p, fechaISO) {
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  const calendario = p.locator('mat-calendar');
+  await calendario.waitFor();
+  await calendario.locator('.mat-calendar-body-cell').first().waitFor();
+  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  for (let i = 0; i < 12; i++) {
+    const periodo = (await calendario.locator('.mat-calendar-period-button').textContent()).toLowerCase();
+    const mesVisible = meses.findIndex((x) => periodo.includes(x));
+    const anioVisible = Number(periodo.match(/\d{4}/)[0]);
+    if (mesVisible === m - 1 && anioVisible === y) {
+      await calendario.locator('.mat-calendar-body-cell:not(.mat-calendar-body-disabled)').filter({ hasText: new RegExp(`^\\s*${d}\\s*$`) }).first().click();
+      await calendario.waitFor({ state: 'hidden' });
+      return;
+    }
+    const adelante = anioVisible < y || (anioVisible === y && mesVisible < m - 1);
+    await calendario.locator(adelante ? '.mat-calendar-next-button' : '.mat-calendar-previous-button').click();
+    await p.waitForTimeout(150);
+  }
+  throw new Error(`no se pudo llegar a ${fechaISO}`);
+}
+async function abrirDialogoPrestamo(p, socio, libro) {
+  await ir(p, `${BIB}/prestamos`);
+  await p.getByRole('button', { name: /Nuevo préstamo/ }).click();
+  await dialogo(p).waitFor();
+  if (socio) await elegirAutocompletado(p, 'Socio', socio, socio);
+  if (libro) await elegirAutocompletado(p, 'Libro', libro, libro);
+}
+
+console.log('\nBIBLIOTECA (segunda ronda)');
+
+await prueba('B32 Préstamo con fecha pasada: vence hoy no cuenta como vencido y permite renovar', async (p) => {
+  await cargarDemo(p);
+  await abrirDialogoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  await dialogo(p).locator('mat-datepicker-toggle button').click();
+  await elegirEnCalendario(p, sumarDias(hoyISO(), -14));
+  await dialogo(p).getByText(`Vence el ${hoyISO()}`).waitFor();
+  await dialogo(p).getByRole('button', { name: 'Registrar préstamo' }).click();
+  await esperarSnack(p, 'Préstamo registrado');
+  await cerrarSnacks(p);
+  const fila = p.locator('table tr.mat-mdc-row').filter({ hasText: 'Carlos Díaz' }).filter({ hasText: 'Clean Code' });
+  const t = await texto(fila);
+  assert.match(t, /Vence hoy/);
+  assert.match(t, /\$0\.00/);
+  assert.equal(await botonIcono(fila, 'update').isDisabled(), false, 'vence hoy: todavía se puede renovar');
+  assert.equal(await p.locator('.badge-vencidos').count() && (await p.locator('.badge-vencidos').textContent()).trim(), '1', 'solo el vencido de la demo');
+  // Carlos puede tomar otro libro: vence hoy no es vencido.
+  await nuevoPrestamo(p, 'Carlos Díaz Ejemplo', 'Cálculo');
+  await esperarSnack(p, 'Préstamo registrado');
+});
+
+await prueba('B33 Préstamo con fecha 15 días atrás nace vencido con 1 día y multa de 10', async (p) => {
+  await cargarDemo(p);
+  await abrirDialogoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  await dialogo(p).locator('mat-datepicker-toggle button').click();
+  await elegirEnCalendario(p, sumarDias(hoyISO(), -15));
+  await dialogo(p).getByRole('button', { name: 'Registrar préstamo' }).click();
+  await esperarSnack(p, 'Préstamo registrado');
+  await cerrarSnacks(p);
+  const fila = p.locator('table tr.mat-mdc-row').filter({ hasText: 'Carlos Díaz' }).filter({ hasText: 'Clean Code' });
+  const t = await texto(fila);
+  assert.match(t, /Vencido \(1 d\)/);
+  assert.match(t, /\$10\.00/);
+  assert.equal(await botonIcono(fila, 'update').isDisabled(), true);
+  assert.equal((await p.locator('.badge-vencidos').textContent()).trim(), '2');
+});
+
+await prueba('B34 Fecha de préstamo escrita a mano en formato local (d/M/aaaa) se interpreta bien', async (p) => {
+  await cargarDemo(p);
+  await abrirDialogoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  const campo = dialogo(p).getByLabel('Fecha de préstamo');
+  const mostrado = await campo.inputValue(); // así muestra la app la fecha de hoy, p. ej. 18/9/2026
+  const [dd, mm, aaaa] = mostrado.split('/').map(Number);
+  assert.equal(`${aaaa}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`, hoyISO(), `el campo muestra ${mostrado}`);
+  // Escribir 4 días antes en el mismo formato que muestra el campo.
+  const objetivo = sumarDias(hoyISO(), -4);
+  const [y, m, d] = objetivo.split('-').map(Number);
+  await campo.fill(`${d}/${m}/${y}`);
+  await campo.blur();
+  await p.waitForTimeout(300);
+  const esperado = sumarDias(objetivo, 14);
+  const resumen = await texto(dialogo(p).locator('.resumen'));
+  const boton = dialogo(p).getByRole('button', { name: 'Registrar préstamo' });
+  assert.ok(
+    resumen.includes(`Vence el ${esperado}`) && !(await boton.isDisabled()),
+    `al escribir ${d}/${m}/${y} el diálogo muestra "${resumen}" y el botón ${(await boton.isDisabled()) ? 'queda deshabilitado' : 'sigue habilitado'} (se esperaba vencer el ${esperado})`,
+  );
+});
+
+await prueba('B35 Fecha de préstamo futura no se acepta', async (p) => {
+  await cargarDemo(p);
+  await abrirDialogoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  await dialogo(p).locator('mat-datepicker-toggle button').click();
+  const calendario = p.locator('mat-calendar');
+  await calendario.locator('.mat-calendar-body-cell').first().waitFor();
+  // Todas las celdas posteriores a hoy deben estar deshabilitadas en el mes visible.
+  const hoyCelda = calendario.locator('.mat-calendar-body-cell:has(.mat-calendar-body-today)');
+  assert.doesNotMatch(await hoyCelda.getAttribute('class'), /mat-calendar-body-disabled/, 'hoy debe estar habilitado');
+  const dia = Number(hoyISO().split('-')[2]);
+  const habilitadas = (await calendario.locator('.mat-calendar-body-cell:not(.mat-calendar-body-disabled)').allTextContents()).map((x) => Number(x.trim()));
+  assert.ok(habilitadas.every((x) => x <= dia), `hay días futuros habilitados: ${habilitadas.filter((x) => x > dia)}`);
+});
+
+await prueba('B36 Socio o libro escritos sin elegir de la lista no permiten registrar', async (p) => {
+  await cargarDemo(p);
+  await abrirDialogoPrestamo(p);
+  const socio = dialogo(p).getByRole('combobox', { name: 'Socio' });
+  await socio.click();
+  await socio.fill('Ana Torres Ejemplo');
+  await p.keyboard.press('Escape');
+  const libro = dialogo(p).getByRole('combobox', { name: 'Libro' });
+  await libro.click();
+  await libro.fill('Clean Code');
+  await p.keyboard.press('Escape');
+  await dialogo(p).getByLabel('Fecha de préstamo').click();
+  assert.equal(await dialogo(p).getByRole('button', { name: 'Registrar préstamo' }).isDisabled(), true);
+  await dialogo(p).getByText('Selecciona un socio de la lista').waitFor();
+});
+
+await prueba('B37 Cambiar ISBN de un libro a uno existente se rechaza', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/libros`);
+  await botonIcono(await filaTabla(p, 'Pedro Páramo'), 'edit').click();
+  const d = dialogo(p);
+  await llenar(p, 'ISBN', '9780132350884', d);
+  await d.getByRole('button', { name: 'Guardar cambios' }).click();
+  await esperarSnack(p, 'Ya existe un libro con el ISBN 9780132350884');
+  await d.waitFor({ state: 'visible' });
+});
+
+await prueba('B38 ISBN igual con y sin guiones se detecta como duplicado', async (p) => {
+  await cargarDemo(p);
+  await registrarLibro(p, { titulo: 'Clean Code (otra edición)', autor: 'Robert C. Martin', isbn: '978-0-13-235088-4' });
+  const snack = await snackbar(p).first().textContent();
+  assert.match(snack, /Ya existe un libro con el ISBN/, `se registró un segundo "Clean Code" con el mismo ISBN escrito con guiones (mensaje: "${snack.trim()}")`);
+});
+
+await prueba('B39 Ejemplares totales y año no aceptan decimales', async (p) => {
+  await ir(p, `${BIB}/libros`);
+  await p.getByRole('button', { name: /Nuevo libro/ }).click();
+  const d = dialogo(p);
+  await llenar(p, 'Título', 'Decimales', d);
+  await llenar(p, 'Autor', 'Alguien', d);
+  await llenar(p, 'ISBN', '9781111111111', d);
+  await llenar(p, 'Ejemplares totales', '2.5', d);
+  const boton = d.getByRole('button', { name: 'Registrar libro' });
+  assert.equal(await boton.isDisabled(), true, 'con 2.5 ejemplares el botón debería estar deshabilitado');
+});
+
+await prueba('B40 Título o nombre con solo espacios no se aceptan', async (p) => {
+  await ir(p, `${BIB}/libros`);
+  await p.getByRole('button', { name: /Nuevo libro/ }).click();
+  const d = dialogo(p);
+  await llenar(p, 'Título', '   ', d);
+  await llenar(p, 'Autor', '   ', d);
+  await llenar(p, 'ISBN', '9781111111111', d);
+  assert.equal(await d.getByRole('button', { name: 'Registrar libro' }).isDisabled(), true, 'título y autor en blanco pasan la validación');
+});
+
+await prueba('B41 Editar socio conserva código, fecha de alta y estado', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/socios`);
+  const fila = await filaTabla(p, 'Luis Ramírez');
+  const antes = await texto(fila);
+  const codigo = antes.match(/S-\d{4}/)[0];
+  const alta = antes.match(/Alta: (\d{4}-\d{2}-\d{2})/)[1];
+  await botonIcono(fila, 'edit').click();
+  const d = dialogo(p);
+  await d.getByText(`Editar socio ${codigo}`).waitFor();
+  await llenar(p, 'Nombre completo', 'Luis Ramírez Editado', d);
+  await elegirOpcion(p, 'Tipo de socio', 'Externo', d);
+  await d.getByRole('button', { name: 'Guardar cambios' }).click();
+  await esperarSnack(p, 'Socio actualizado');
+  const despues = await texto(await filaTabla(p, 'Luis Ramírez Editado'));
+  assert.match(despues, new RegExp(codigo));
+  assert.match(despues, new RegExp(`Alta: ${alta}`));
+  assert.match(despues, /externo/);
+  assert.match(despues, /1 \/ 3/, 'sigue con su préstamo activo');
+  assert.match(despues, /Activo/);
+});
+
+await prueba('B42 Reducir ejemplares al número prestado deja el libro agotado y fuera del préstamo', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/libros`);
+  await botonIcono(await filaTabla(p, 'Clean Code'), 'edit').click();
+  await llenar(p, 'Ejemplares totales', 1, dialogo(p));
+  await dialogo(p).getByRole('button', { name: 'Guardar cambios' }).click();
+  await esperarSnack(p, 'Libro actualizado');
+  await cerrarSnacks(p);
+  assert.match(await texto(await filaTabla(p, 'Clean Code')), /0 \/ 1/);
+  await elegirOpcion(p, 'Disponibilidad', 'Sin ejemplares disponibles');
+  await p.getByText('2 de 10 títulos').waitFor();
+  await nuevoPrestamo(p, 'Carlos Díaz Ejemplo', 'Cálculo');
+  await esperarSnack(p, 'Préstamo registrado');
+  await ir(p, `${BIB}/`);
+  await p.waitForTimeout(300);
+  assert.equal(await textoTarjeta(p, 'Ejemplares disponibles'), '15', '19 menos 3 de Clean Code menos 1 de Cálculo');
+});
+
+await prueba('B43 Reactivar un socio inactivo vuelve a permitirle préstamos', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/socios`);
+  const fila = await filaTabla(p, 'Carlos Díaz');
+  await fila.locator('mat-slide-toggle button').click();
+  await esperarSnack(p, 'Socio desactivado');
+  await cerrarSnacks(p);
+  assert.match(await texto(fila), /Inactivo/);
+  await fila.locator('mat-slide-toggle button').click();
+  await esperarSnack(p, 'Socio activado');
+  await cerrarSnacks(p);
+  assert.match(await texto(fila), /Activo/);
+  await nuevoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  await esperarSnack(p, 'Préstamo registrado');
+});
+
+await prueba('B44 Búsqueda de préstamos por código de socio y filtro Todos', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/prestamos`);
+  await p.locator('mat-button-toggle', { hasText: 'Todos' }).click();
+  await p.locator('table tr.mat-mdc-row').nth(3).waitFor();
+  assert.equal(await p.locator('table tr.mat-mdc-row').count(), 4);
+  await p.getByLabel('Buscar por libro o socio').fill('S-0004');
+  await p.waitForTimeout(200);
+  assert.equal(await p.locator('table tr.mat-mdc-row').count(), 1);
+  assert.match(await texto(p.locator('table tr.mat-mdc-row').first()), /Carlos Díaz.*Devuelto con multa/);
+  await p.getByLabel('Buscar por libro o socio').fill('zzzz');
+  await p.getByText('No hay préstamos que mostrar').waitFor();
+});
+
+await prueba('B45 Ajustes: valores inválidos deshabilitan Guardar y el botón queda inactivo sin cambios', async (p) => {
+  await ir(p, `${BIB}/ajustes`);
+  const boton = p.getByRole('button', { name: 'Guardar reglas' });
+  await p.waitForTimeout(300);
+  assert.equal(await boton.isDisabled(), true, 'sin cambios');
+  await llenar(p, 'Días de préstamo', 0);
+  assert.equal(await boton.isDisabled(), true, 'días = 0');
+  await llenar(p, 'Días de préstamo', 10);
+  await llenar(p, 'Multa por día', -1);
+  assert.equal(await boton.isDisabled(), true, 'multa negativa');
+  await llenar(p, 'Multa por día', 0);
+  assert.equal(await boton.isDisabled(), false, 'multa 0 es válida');
+  await boton.click();
+  await esperarSnack(p, 'Reglas guardadas');
+  await p.waitForTimeout(300);
+  assert.equal(await boton.isDisabled(), true, 'vuelve a quedar sin cambios');
+});
+
+await prueba('B46 Eliminar socio con historial devuelto elimina también su historial', async (p) => {
+  await cargarDemo(p);
+  await ir(p, `${BIB}/socios`);
+  await botonIcono(await filaTabla(p, 'Carlos Díaz'), 'delete').click();
+  await dialogo(p).getByRole('button', { name: 'Eliminar' }).click();
+  await esperarSnack(p, 'Socio eliminado');
+  await ir(p, `${BIB}/prestamos`);
+  await p.locator('mat-button-toggle', { hasText: 'Todos' }).click();
+  await p.waitForTimeout(300);
+  assert.equal(await p.locator('table tr.mat-mdc-row').count(), 3);
+  assert.equal(await p.locator('table tr.mat-mdc-row').filter({ hasText: 'eliminado' }).count(), 0);
+});
+
+await prueba('B47 Dos pestañas: el segundo préstamo del último ejemplar se rechaza', async (p) => {
+  await cargarDemo(p);
+  const p2 = await contexto.newPage();
+  p2.on('pageerror', (e) => erroresConsola.push(`pageerror(p2): ${e.message}`));
+  // Domain-Driven Design tiene 1 ejemplar. Ambas pestañas abren el diálogo con él elegido.
+  await abrirDialogoPrestamo(p, 'Ana Torres Ejemplo', 'Domain-Driven Design');
+  await abrirDialogoPrestamo(p2, 'Carlos Díaz Ejemplo', 'Domain-Driven Design');
+  await dialogo(p).getByRole('button', { name: 'Registrar préstamo' }).click();
+  await esperarSnack(p, 'Préstamo registrado');
+  await dialogo(p2).getByRole('button', { name: 'Registrar préstamo' }).click();
+  await esperarSnack(p2, 'No hay ejemplares disponibles de "Domain-Driven Design"');
+  await p2.close();
+  await ir(p, `${BIB}/libros`);
+  assert.match(await texto(await filaTabla(p, 'Domain-Driven Design')), /0 \/ 1/);
+});
+
+await prueba('B48 Los datos de una pestaña aparecen en la otra sin recargar (liveQuery)', async (p) => {
+  await cargarDemo(p);
+  const p2 = await contexto.newPage();
+  await ir(p2, `${BIB}/`);
+  assert.equal(await textoTarjeta(p2, 'Préstamos activos'), '3');
+  await nuevoPrestamo(p, 'Carlos Díaz Ejemplo', 'Clean Code');
+  await esperarSnack(p, 'Préstamo registrado');
+  await p2.locator('mat-card').filter({ hasText: 'Préstamos activos' }).locator('.valor').filter({ hasText: '4' }).waitFor({ timeout: 5000 });
+  await p2.close();
+});
+
+await prueba('B49 Enter en el diálogo registra y Escape lo cierra sin guardar', async (p) => {
+  await ir(p, `${BIB}/socios`);
+  await p.getByRole('button', { name: /Nuevo socio/ }).click();
+  const d = dialogo(p);
+  await llenar(p, 'Nombre completo', 'Con Enter', d);
+  await llenar(p, 'Correo electrónico', 'enter@prueba.test', d);
+  await d.getByLabel('Correo electrónico').press('Enter');
+  await esperarSnack(p, 'Socio registrado');
+  await cerrarSnacks(p);
+  await d.waitFor({ state: 'hidden' });
+  await p.getByRole('button', { name: /Nuevo socio/ }).click();
+  await llenar(p, 'Nombre completo', 'Con Escape', dialogo(p));
+  await p.keyboard.press('Escape');
+  await dialogo(p).waitFor({ state: 'hidden' });
+  await p.getByText('1 de 1 socios').waitFor();
+});
+
+await prueba('B50 PWA: tras la primera carga la biblioteca abre sin conexión', async (p) => {
+  await ir(p, `${BIB}/`);
+  await p.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+  // ngsw termina de cachear los recursos poco después de registrarse.
+  await p.waitForFunction(() => caches.keys().then((k) => k.some((x) => x.startsWith('ngsw'))), null, { timeout: 15000 });
+  await p.waitForTimeout(1500);
+  await cargarDemo(p);
+  await contexto.setOffline(true);
+  try {
+    await p.goto(`${BIB}/libros`, { waitUntil: 'load', timeout: 20000 });
+    await p.reload({ waitUntil: 'load', timeout: 20000 });
+    await p.getByText('10 de 10 títulos').waitFor({ timeout: 15000 });
+  } finally {
+    await contexto.setOffline(false);
+  }
+});
+
+// ---------- clínica, segunda ronda ----------
+console.log('\nCLÍNICA (segunda ronda)');
+
+await prueba('C20 Cambiar de especialidad reinicia médico, fecha y hora', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '08:00' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  // Regresar al paso 1 y elegir otra especialidad.
+  await p.locator('.mat-step-header').nth(0).click();
+  await pasoActivo(p).getByRole('button', { name: MEDICOS.m3.esp }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  const medicos = await pasoActivo(p).locator('button.opcion').allTextContents();
+  assert.equal(medicos.length, 1);
+  assert.match(medicos[0], new RegExp(MEDICOS.m3.nombre));
+  assert.equal(await pasoActivo(p).locator('button.opcion.seleccionada').count(), 0, 'ningún médico preseleccionado');
+  assert.equal(await pasoActivo(p).getByRole('button', { name: 'Continuar' }).isDisabled(), true);
+});
+
+await prueba('C21 Enlaces de Servicios y Equipo preseleccionan especialidad y médico', async (p) => {
+  await ir(p, `${CLI}/servicios`);
+  await p.locator('mat-card').filter({ hasText: 'Odontología' }).getByRole('link', { name: 'Agendar' }).click();
+  await p.locator('button.opcion.seleccionada').filter({ hasText: 'Odontología' }).waitFor();
+  await ir(p, `${CLI}/equipo`);
+  await p.getByRole('link', { name: /Agendar con Dra\. Fernanda/ }).click();
+  await p.locator('button.opcion.seleccionada').filter({ hasText: MEDICOS.m3.nombre }).waitFor({ state: 'attached' });
+  await p.locator('button.opcion.seleccionada').filter({ hasText: 'Pediatría' }).waitFor();
+});
+
+await prueba('C22 Nombre o motivo con solo espacios no se aceptan', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '08:00' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  const paso = pasoActivo(p);
+  await paso.getByLabel('Nombre completo').fill('   ');
+  await paso.getByLabel('Teléfono').fill(PACIENTE.telefono);
+  await paso.getByLabel('Correo electrónico').fill(PACIENTE.email);
+  await paso.getByLabel('Motivo').fill('   ');
+  assert.equal(await paso.getByRole('button', { name: 'Confirmar cita' }).isDisabled(), true, 'nombre y motivo en blanco pasan la validación');
+});
+
+await prueba('C23 Fecha de nacimiento futura no se acepta', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '08:00' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  const paso = pasoActivo(p);
+  await paso.getByLabel('Nombre completo').fill(PACIENTE.nombre);
+  await paso.getByLabel('Teléfono').fill(PACIENTE.telefono);
+  await paso.getByLabel('Correo electrónico').fill(PACIENTE.email);
+  await paso.getByLabel('Motivo').fill(PACIENTE.motivo);
+  await paso.getByLabel('Fecha de nacimiento').fill(sumarDias(hoyISO(), 365));
+  assert.equal(await paso.getByRole('button', { name: 'Confirmar cita' }).isDisabled(), true, 'una fecha de nacimiento futura pasa la validación');
+});
+
+await prueba('C24 Dos pestañas eligen el mismo horario: la segunda recibe "acaba de ocuparse"', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  const p2 = await contexto.newPage();
+  p2.on('pageerror', (e) => erroresConsola.push(`pageerror(p2): ${e.message}`));
+  const otro = { ...PACIENTE, nombre: 'Paciente Prueba Dos', telefono: '5533334444' };
+  // Ambas llegan al paso 4 con 10:00 elegido antes de que alguna confirme.
+  for (const [pag, pac] of [[p, PACIENTE], [p2, otro]]) {
+    await agendar(pag, 'm1', fecha, null, pac, { soloHastaHorarios: true });
+    await pasoActivo(pag).locator('button.hora', { hasText: '10:00' }).click();
+    await pasoActivo(pag).getByRole('button', { name: 'Continuar' }).click();
+    const paso = pasoActivo(pag);
+    await paso.getByLabel('Nombre completo').fill(pac.nombre);
+    await paso.getByLabel('Teléfono').fill(pac.telefono);
+    await paso.getByLabel('Correo electrónico').fill(pac.email);
+    await paso.getByLabel('Motivo').fill(pac.motivo);
+  }
+  await pasoActivo(p).getByRole('button', { name: 'Confirmar cita' }).click();
+  await p.locator('mat-card.confirmacion').waitFor();
+  // La segunda pestaña recibe el aviso y regresa al paso 3 con el horario 10:00 marcado como ocupado.
+  await esperarSnack(p2, 'acaba de ocuparse');
+  await pasoActivo(p2).locator('button.hora.ocupada', { hasText: '10:00' }).waitFor();
+  assert.equal(await pasoActivo(p2).getByRole('button', { name: 'Continuar' }).isDisabled(), true, 'sin hora no debe poder continuar');
+  assert.equal(await p2.locator('mat-card.confirmacion').count(), 0);
+  assert.equal(await p2.locator('mat-card.confirmacion').count(), 0);
+  await p2.close();
+  const citas = await leerIDB(p, 'clinica-db', 'citas');
+  assert.equal(citas.filter((c) => c.fecha === fecha && c.hora === '10:00' && c.medicoId === 'm1').length, 1);
+});
+
+await prueba('C24b Si el horario se ocupa mientras se llenan los datos, avisa y regresa a elegir hora', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '08:30' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  await pasoActivo(p).getByLabel('Nombre completo').fill(PACIENTE.nombre);
+  // Otra pestaña toma 08:30.
+  const p2 = await contexto.newPage();
+  await agendar(p2, 'm1', fecha, '08:30', { ...PACIENTE, telefono: '5599990000' });
+  await p2.close();
+  await esperarSnack(p, 'acaba de ocuparse');
+  await pasoActivo(p).locator('button.hora.ocupada', { hasText: '08:30' }).waitFor();
+  assert.equal(await pasoActivo(p).getByRole('button', { name: 'Continuar' }).isDisabled(), true, 'sin hora no debe poder continuar');
+});
+
+await prueba('C25 Doble clic en Confirmar cita crea una sola cita', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '11:00' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  const paso = pasoActivo(p);
+  await paso.getByLabel('Nombre completo').fill(PACIENTE.nombre);
+  await paso.getByLabel('Teléfono').fill(PACIENTE.telefono);
+  await paso.getByLabel('Correo electrónico').fill(PACIENTE.email);
+  await paso.getByLabel('Motivo').fill(PACIENTE.motivo);
+  const boton = paso.getByRole('button', { name: 'Confirmar cita' });
+  await boton.evaluate((b) => { b.click(); b.click(); b.click(); });
+  await p.locator('mat-card.confirmacion').waitFor();
+  await p.waitForTimeout(800);
+  const citas = await leerIDB(p, 'clinica-db', 'citas');
+  assert.equal(citas.length, 1, `se crearon ${citas.length} citas`);
+});
+
+await prueba('C26 Día con todos los horarios ocupados muestra aviso y no permite continuar', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await ir(p, `${CLI}/agendar`);
+  const horas = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30'];
+  await insertarEnIDB(p, 'clinica-db', 'citas', horas.map((hora, i) => ({
+    folio: `LLENO-${String(i + 1).padStart(3, '0')}`, especialidadId: 'general', medicoId: 'm1', fecha, hora,
+    pacienteNombre: `Paciente Lleno ${i + 1}`, pacienteTelefono: `55000001${String(i).padStart(2, '0')}`, pacienteEmail: `lleno${i}@correo.test`,
+    motivo: 'Prueba', primeraVez: false, estado: i % 2 ? 'confirmada' : 'programada', creadaEn: new Date().toISOString(),
+  })));
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true }).catch(() => {});
+  await pasoActivo(p).getByText('No hay horarios libres ese día').waitFor();
+  assert.equal(await pasoActivo(p).getByRole('button', { name: 'Continuar' }).isDisabled(), true);
+  // Otro día del mismo médico sí tiene horarios.
+  await pasoActivo(p).locator('mat-datepicker-toggle button').click();
+  await elegirEnCalendario(p, proximaFecha(MEDICOS.m1.dias, hoyISO(), 1));
+  await pasoActivo(p).locator('.grid-horas').waitFor();
+  assert.equal(await pasoActivo(p).locator('button.hora:not([disabled])').count(), 12);
+});
+
+await prueba('C27 Cita cancelada en recepción: el paciente la ve cancelada con el motivo y no puede volver a cancelar', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  const folio = await agendar(p, 'm1', fecha, '12:30');
+  // El paciente deja abierta su tarjeta.
+  await ir(p, `${CLI}/mis-citas`);
+  await p.getByLabel('Folio').fill(folio);
+  await p.getByLabel('Teléfono').fill(PACIENTE.telefono);
+  await p.getByRole('button', { name: 'Buscar cita' }).click();
+  await p.locator('mat-card.detalle').waitFor();
+  // Recepción la cancela en otra pestaña.
+  const p2 = await contexto.newPage();
+  await ir(p2, `${CLI}/recepcion`);
+  const dias = Math.round((new Date(fecha) - new Date(hoyISO())) / 86400000);
+  for (let i = 0; i < dias; i++) await botonIcono(p2, 'chevron_right').click();
+  const fila = p2.locator('table tr.mat-mdc-row').filter({ hasText: folio });
+  await fila.waitFor();
+  p2.once('dialog', (d) => d.accept('Médico no disponible'));
+  await botonIcono(fila, 'event_busy').click();
+  await esperarSnack(p2, 'Cita cancelada');
+  await p2.close();
+  // El paciente intenta cancelar con la tarjeta desactualizada.
+  p.once('dialog', (d) => d.accept());
+  await p.getByRole('button', { name: 'Cancelar cita' }).click();
+  await esperarSnack(p, 'La cita ya estaba cancelada');
+  await cerrarSnacks(p);
+  await p.getByRole('button', { name: 'Buscar cita' }).click();
+  await p.waitForTimeout(300);
+  const t = await texto(p.locator('mat-card.detalle'));
+  assert.match(t, /Cancelada/);
+  assert.match(t, /Médico no disponible/);
+  assert.equal(await p.getByRole('button', { name: 'Cancelar cita' }).count(), 0);
+  // El horario 12:30 vuelve a estar libre.
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true });
+  assert.equal(await pasoActivo(p).locator('button.hora', { hasText: '12:30' }).isDisabled(), false);
+});
+
+await prueba('C28 Cargar la demo dos veces no duplica horarios ocupados', async (p) => {
+  const n1 = await cargarDemoClinica(p);
+  const antes = (await leerIDB(p, 'clinica-db', 'citas')).length;
+  assert.equal(antes, n1, 'el mensaje debe coincidir con lo guardado');
+  const n2 = await cargarDemoClinica(p);
+  assert.ok(n2 > 0);
+  const citas = await leerIDB(p, 'clinica-db', 'citas');
+  const lotes = {};
+  for (const c of citas) lotes[c.folio.split('-')[1]] = (lotes[c.folio.split('-')[1]] ?? 0) + 1;
+  assert.equal(citas.length, n1 + n2, `snacks: ${n1} y ${n2}; lotes en la base: ${JSON.stringify(lotes)}`);
+  const claves = citas.filter((c) => c.estado !== 'cancelada').map((c) => `${c.medicoId}|${c.fecha}|${c.hora}`);
+  assert.equal(new Set(claves).size, claves.length, 'hay dos citas activas en el mismo horario del mismo médico');
+  const folios = citas.map((c) => c.folio);
+  assert.equal(new Set(folios).size, folios.length, 'folios repetidos');
+});
+
+await prueba('C29 Recepción: búsqueda por teléfono y por folio, y fecha sin citas', async (p) => {
+  await cargarDemoClinica(p);
+  const primera = p.locator('table tr.mat-mdc-row').first();
+  const [telefono, folio] = (await primera.locator('.sub').first().textContent()).split('·').map((x) => x.trim());
+  await p.getByLabel('Buscar paciente o folio').fill(folio);
+  assert.equal(await p.locator('table tr.mat-mdc-row').count(), 1);
+  await p.getByLabel('Buscar paciente o folio').fill(telefono);
+  assert.ok((await p.locator('table tr.mat-mdc-row').count()) >= 1);
+  for (const t of await p.locator('table tr.mat-mdc-row').allTextContents()) assert.match(t, new RegExp(telefono));
+  await p.getByLabel('Buscar paciente o folio').fill('');
+  for (let i = 0; i < 20; i++) await botonIcono(p, 'chevron_right').click();
+  await p.getByText('No hay citas para esta fecha').waitFor();
+  assert.equal(await p.locator('.resumen .chip').count(), 0);
+  assert.equal(await p.getByRole('button', { name: /Exportar CSV/ }).isDisabled(), true);
+});
+
+await prueba('C30 Agendar otra cita reinicia el flujo y el formulario', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m1.dias);
+  await agendar(p, 'm1', fecha, '13:00');
+  await p.getByRole('button', { name: 'Agendar otra cita' }).click();
+  await pasoActivo(p).getByRole('button', { name: MEDICOS.m1.esp }).waitFor();
+  assert.equal(await p.locator('button.opcion.seleccionada').count(), 0);
+  assert.equal(await pasoActivo(p).getByRole('button', { name: 'Continuar' }).isDisabled(), true);
+  await agendar(p, 'm1', fecha, null, PACIENTE, { soloHastaHorarios: true, continuar: true });
+  await pasoActivo(p).locator('button.hora', { hasText: '13:30' }).click();
+  await pasoActivo(p).getByRole('button', { name: 'Continuar' }).click();
+  assert.equal(await pasoActivo(p).getByLabel('Nombre completo').inputValue(), '', 'el nombre del paciente anterior sigue en el formulario');
+  assert.equal(await pasoActivo(p).getByLabel('Teléfono').inputValue(), '');
+});
+
+await prueba('C31 ICS de odontología dura 45 minutos', async (p) => {
+  const fecha = proximaFecha(MEDICOS.m4.dias);
+  await agendar(p, 'm4', fecha, '10:45');
+  const [descarga] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /Agregar al calendario/ }).click()]);
+  const ruta = resolve(salida, 'tmp-odonto.ics');
+  await descarga.saveAs(ruta);
+  const ics = readFileSync(ruta, 'utf8');
+  assert.match(ics, new RegExp(`DTSTART:${fecha.replace(/-/g, '')}T104500`));
+  assert.match(ics, new RegExp(`DTEND:${fecha.replace(/-/g, '')}T113000`));
+});
+
+
 // ---------- resumen ----------
 await navegador.close();
-servidor.kill();
+servidor?.kill();
 for (const f of readdirSync(salida)) if (f.startsWith('tmp-')) rmSync(resolve(salida, f));
 
 const ok = resultados.filter((r) => r.ok).length;

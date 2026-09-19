@@ -49,7 +49,8 @@ export class BibliotecaService {
   // ---------- Libros ----------
 
   async guardarLibro(libro: Libro): Promise<number> {
-    const isbn = libro.isbn.trim();
+    // Se guarda sin guiones ni espacios para que 978-0-13... y 9780 13... sean el mismo ISBN.
+    const isbn = libro.isbn.replace(/[\s-]/g, '');
     const duplicado = await db.libros.where('isbn').equals(isbn).first();
     if (duplicado && duplicado.id !== libro.id) {
       throw new ReglaNegocioError(`Ya existe un libro con el ISBN ${isbn}.`);

@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { BibliotecaService } from '../../core/biblioteca.service';
 import { NotificacionesService } from '../../core/notificaciones.service';
 import { ConfirmarDialog } from '../../core/confirmar.dialog';
+import { entero, requeridoSinEspacios } from '../../core/validadores';
 
 @Component({
   selector: 'app-ajustes',
@@ -33,15 +34,18 @@ import { ConfirmarDialog } from '../../core/confirmar.dialog';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Días de préstamo</mat-label>
-              <input matInput type="number" formControlName="diasPrestamo" min="1" />
+              <input matInput type="number" formControlName="diasPrestamo" min="1" step="1" />
+              @if (form.controls.diasPrestamo.invalid) { <mat-error>Entero mayor o igual a 1.</mat-error> }
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Límite de préstamos por socio</mat-label>
-              <input matInput type="number" formControlName="limitePrestamos" min="1" />
+              <input matInput type="number" formControlName="limitePrestamos" min="1" step="1" />
+              @if (form.controls.limitePrestamos.invalid) { <mat-error>Entero mayor o igual a 1.</mat-error> }
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Multa por día de retraso (MXN)</mat-label>
               <input matInput type="number" formControlName="multaPorDia" min="0" step="0.5" />
+              @if (form.controls.multaPorDia.invalid) { <mat-error>Debe ser 0 o mayor.</mat-error> }
             </mat-form-field>
             <div class="ancho-completo acciones">
               <button matButton="filled" type="submit" [disabled]="form.invalid || form.pristine">Guardar reglas</button>
@@ -91,9 +95,9 @@ export class Ajustes {
   private readonly fb = inject(FormBuilder);
 
   protected readonly form = this.fb.nonNullable.group({
-    nombreBiblioteca: ['', Validators.required],
-    diasPrestamo: [14, [Validators.required, Validators.min(1)]],
-    limitePrestamos: [3, [Validators.required, Validators.min(1)]],
+    nombreBiblioteca: ['', requeridoSinEspacios],
+    diasPrestamo: [14, [Validators.required, entero, Validators.min(1)]],
+    limitePrestamos: [3, [Validators.required, entero, Validators.min(1)]],
     multaPorDia: [10, [Validators.required, Validators.min(0)]],
   });
 

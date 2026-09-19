@@ -1,6 +1,6 @@
-# Resultado de pruebas funcionales (2026-09-19 02:57)
+# Resultado de pruebas funcionales (2026-09-19 03:27)
 
-50 de 50 pruebas pasaron.
+82 de 82 pruebas pasaron.
 
 | Prueba | Resultado | Detalle |
 |---|---|---|
@@ -54,3 +54,35 @@
 | C17 Móvil: menú hamburguesa navega a Agendar | OK |  |
 | C18 Accesibilidad: botones de icono de recepción tienen nombre accesible | OK |  |
 | C19 Ruta desconocida redirige al inicio | OK |  |
+| B32 Préstamo con fecha pasada: vence hoy no cuenta como vencido y permite renovar | OK |  |
+| B33 Préstamo con fecha 15 días atrás nace vencido con 1 día y multa de 10 | OK |  |
+| B34 Fecha de préstamo escrita a mano en formato local (d/M/aaaa) se interpreta bien | OK |  |
+| B35 Fecha de préstamo futura no se acepta | OK |  |
+| B36 Socio o libro escritos sin elegir de la lista no permiten registrar | OK |  |
+| B37 Cambiar ISBN de un libro a uno existente se rechaza | OK |  |
+| B38 ISBN igual con y sin guiones se detecta como duplicado | OK |  |
+| B39 Ejemplares totales y año no aceptan decimales | OK |  |
+| B40 Título o nombre con solo espacios no se aceptan | OK |  |
+| B41 Editar socio conserva código, fecha de alta y estado | OK |  |
+| B42 Reducir ejemplares al número prestado deja el libro agotado y fuera del préstamo | OK |  |
+| B43 Reactivar un socio inactivo vuelve a permitirle préstamos | OK |  |
+| B44 Búsqueda de préstamos por código de socio y filtro Todos | OK |  |
+| B45 Ajustes: valores inválidos deshabilitan Guardar y el botón queda inactivo sin cambios | OK |  |
+| B46 Eliminar socio con historial devuelto elimina también su historial | OK |  |
+| B47 Dos pestañas: el segundo préstamo del último ejemplar se rechaza | OK |  |
+| B48 Los datos de una pestaña aparecen en la otra sin recargar (liveQuery) | OK |  |
+| B49 Enter en el diálogo registra y Escape lo cierra sin guardar | OK |  |
+| B50 PWA: tras la primera carga la biblioteca abre sin conexión | OK |  |
+| C20 Cambiar de especialidad reinicia médico, fecha y hora | OK |  |
+| C21 Enlaces de Servicios y Equipo preseleccionan especialidad y médico | OK |  |
+| C22 Nombre o motivo con solo espacios no se aceptan | OK |  |
+| C23 Fecha de nacimiento futura no se acepta | OK |  |
+| C24 Dos pestañas eligen el mismo horario: la segunda recibe "acaba de ocuparse" | OK |  |
+| C24b Si el horario se ocupa mientras se llenan los datos, avisa y regresa a elegir hora | OK |  |
+| C25 Doble clic en Confirmar cita crea una sola cita | OK |  |
+| C26 Día con todos los horarios ocupados muestra aviso y no permite continuar | OK |  |
+| C27 Cita cancelada en recepción: el paciente la ve cancelada con el motivo y no puede volver a cancelar | OK |  |
+| C28 Cargar la demo dos veces no duplica horarios ocupados | OK |  |
+| C29 Recepción: búsqueda por teléfono y por folio, y fecha sin citas | OK |  |
+| C30 Agendar otra cita reinicia el flujo y el formulario | OK |  |
+| C31 ICS de odontología dura 45 minutos | OK |  |

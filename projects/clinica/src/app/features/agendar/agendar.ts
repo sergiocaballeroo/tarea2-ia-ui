@@ -1,8 +1,8 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatStepperModule } from '@angular/material/stepper';
+import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -11,7 +11,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { CitasService } from '../../core/citas.service';
+import { CitasService, ReglaNegocioError } from '../../core/citas.service';
+import { fechaNoFutura, requeridoSinEspacios } from '../../core/validadores';
 import { NotificacionesService } from '../../core/notificaciones.service';
 import { CLINICA, ESPECIALIDADES, MEDICOS, Medico, diasTexto, especialidadDe, medicoDe } from '../../core/datos-clinica';
 import { Cita, aISO, fechaLarga, sumarDias, hoyISO, deISO } from '../../core/models';
@@ -154,6 +155,7 @@ import { Cita, aISO, fechaLarga, sumarDias, hoyISO, deISO } from '../../core/mod
               <mat-form-field appearance="outline">
                 <mat-label>Fecha de nacimiento (opcional)</mat-label>
                 <input matInput type="date" formControlName="pacienteNacimiento" [max]="hoyISO" />
+                @if (form.controls.pacienteNacimiento.hasError('futura')) { <mat-error>La fecha de nacimiento no puede ser futura.</mat-error> }
               </mat-form-field>
               <mat-form-field appearance="outline" class="ancho-completo">
                 <mat-label>Motivo de la consulta</mat-label>
@@ -173,7 +175,7 @@ import { Cita, aISO, fechaLarga, sumarDias, hoyISO, deISO } from '../../core/mod
 
             <div class="acciones">
               <button matButton matStepperPrevious>Atrás</button>
-              <button matButton="filled" (click)="confirmar()" [disabled]="form.invalid || guardando()">
+              <button matButton="filled" (click)="confirmar()" [disabled]="form.invalid || guardando() || !hora()">
                 @if (guardando()) { <mat-spinner diameter="18" /> } @else { <mat-icon>event_available</mat-icon> }
                 Confirmar cita
               </button>
@@ -234,6 +236,7 @@ export class Agendar {
   protected readonly cargando = signal(false);
   protected readonly guardando = signal(false);
   protected readonly citaCreada = signal<Cita | null>(null);
+  private readonly stepper = viewChild(MatStepper);
 
   protected readonly minFecha = deISO(sumarDias(hoyISO(), 1));
   protected readonly maxFecha = deISO(sumarDias(hoyISO(), this.servicio.diasMaximos));
@@ -251,11 +254,11 @@ export class Agendar {
   };
 
   protected readonly form = this.fb.nonNullable.group({
-    pacienteNombre: ['', Validators.required],
+    pacienteNombre: ['', requeridoSinEspacios],
     pacienteTelefono: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
     pacienteEmail: ['', [Validators.required, Validators.email]],
-    pacienteNacimiento: [''],
-    motivo: ['', Validators.required],
+    pacienteNacimiento: ['', fechaNoFutura],
+    motivo: ['', requeridoSinEspacios],
     primeraVez: [false],
   });
 
@@ -282,7 +285,13 @@ export class Agendar {
       this.cargando.set(true);
       const ocupados = await this.servicio.horariosOcupados(medicoId, fecha);
       this.ocupados.set(ocupados);
-      if (ocupados.has(this.hora())) this.hora.set('');
+      if (ocupados.has(this.hora())) {
+        // Otro paciente tomó el horario mientras se llenaba el formulario: avisar y regresar a elegir hora.
+        this.hora.set('');
+        this.notificaciones.error(new ReglaNegocioError('El horario que elegiste acaba de ocuparse. Elige otro, por favor.'));
+        const stepper = this.stepper();
+        if (stepper && stepper.selectedIndex > 2) stepper.selectedIndex = 2;
+      }
       this.cargando.set(false);
     });
   }
@@ -310,7 +319,11 @@ export class Agendar {
   }
 
   protected async confirmar(): Promise<void> {
-    if (this.form.invalid || !this.fecha() || !this.hora()) return;
+    if (this.form.invalid || !this.fecha()) return;
+    if (!this.hora()) {
+      this.notificaciones.error(new ReglaNegocioError('Elige un horario antes de confirmar.'));
+      return;
+    }
     this.guardando.set(true);
     const cita = await this.notificaciones.ejecutar(() =>
       this.servicio.agendar({
@@ -319,6 +332,7 @@ export class Agendar {
         fecha: this.fechaISO(),
         hora: this.hora(),
         ...this.form.getRawValue(),
+        motivo: this.form.getRawValue().motivo.trim(),
       }),
     );
     this.guardando.set(false);

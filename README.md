@@ -113,16 +113,17 @@ npm run capturas       # genera evidencias/capturas/*.png a partir de _site
 
 ## Pruebas funcionales (Playwright)
 
-Cincuenta pruebas de extremo a extremo recorren ambas aplicaciones en Chromium como lo haría una
+Ochenta y dos pruebas de extremo a extremo recorren ambas aplicaciones en Chromium como lo haría una
 persona: alta y edición de libros y socios, reglas de préstamo (límite, vencidos, socio inactivo,
 sin ejemplares), devoluciones con multa, renovaciones, ajustes, respaldo JSON, exportación CSV,
-agenda de citas (horarios, ocupados, duplicados, cancelación), panel de recepción y vista móvil.
+agenda de citas (horarios, ocupados, duplicados, cancelación), panel de recepción, vista móvil, casos límite de fechas, entradas inválidas, dos pestañas compitiendo por el mismo recurso y el modo sin conexión de la PWA.
 Cada prueba usa un contexto nuevo del navegador, así que parte de una base de datos vacía.
 
 ```bash
 npm run build:pages    # las pruebas usan el build de _site
 npm run pruebas        # imprime el resultado; deja evidencias/pruebas/resultado.md y capturas de las fallas
-PRUEBA=B19 npm run pruebas   # corre solo las pruebas cuyo nombre contenga ese texto
+PRUEBA=B19 npm run pruebas   # corre solo las pruebas cuyo nombre coincida con la expresión
+BASE=https://sergiocaballeroo.github.io/tarea2-ia-ui npm run pruebas   # contra el sitio publicado
 ```
 
 ## Documentación por aplicación

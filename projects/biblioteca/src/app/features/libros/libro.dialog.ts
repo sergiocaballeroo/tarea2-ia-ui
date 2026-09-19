@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { BibliotecaService } from '../../core/biblioteca.service';
 import { NotificacionesService } from '../../core/notificaciones.service';
 import { CATEGORIAS, Libro } from '../../core/models';
+import { entero, requeridoSinEspacios } from '../../core/validadores';
 
 /** Alta y edición de un libro del catálogo. */
 @Component({
@@ -40,7 +41,7 @@ import { CATEGORIAS, Libro } from '../../core/models';
         <mat-form-field appearance="outline">
           <mat-label>Año</mat-label>
           <input matInput type="number" formControlName="anio" />
-          @if (form.controls.anio.invalid) { <mat-error>Año entre 1400 y {{ anioMax }}.</mat-error> }
+          @if (form.controls.anio.invalid) { <mat-error>Año entero entre 1400 y {{ anioMax }}.</mat-error> }
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Categoría</mat-label>
@@ -50,8 +51,8 @@ import { CATEGORIAS, Libro } from '../../core/models';
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Ejemplares totales</mat-label>
-          <input matInput type="number" formControlName="ejemplaresTotales" min="1" />
-          @if (form.controls.ejemplaresTotales.invalid) { <mat-error>Debe ser al menos 1.</mat-error> }
+          <input matInput type="number" formControlName="ejemplaresTotales" min="1" step="1" />
+          @if (form.controls.ejemplaresTotales.invalid) { <mat-error>Debe ser un número entero de al menos 1.</mat-error> }
         </mat-form-field>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
@@ -75,13 +76,13 @@ export class LibroDialog {
   protected guardando = false;
 
   protected readonly form = this.fb.nonNullable.group({
-    titulo: [this.libro?.titulo ?? '', Validators.required],
-    autor: [this.libro?.autor ?? '', Validators.required],
+    titulo: [this.libro?.titulo ?? '', requeridoSinEspacios],
+    autor: [this.libro?.autor ?? '', requeridoSinEspacios],
     isbn: [this.libro?.isbn ?? '', [Validators.required, Validators.pattern(/^[\d-]{10,17}$/)]],
     editorial: [this.libro?.editorial ?? ''],
-    anio: [this.libro?.anio ?? new Date().getFullYear(), [Validators.required, Validators.min(1400), Validators.max(this.anioMax)]],
+    anio: [this.libro?.anio ?? new Date().getFullYear(), [Validators.required, entero, Validators.min(1400), Validators.max(this.anioMax)]],
     categoria: [this.libro?.categoria ?? 'Otro', Validators.required],
-    ejemplaresTotales: [this.libro?.ejemplaresTotales ?? 1, [Validators.required, Validators.min(1)]],
+    ejemplaresTotales: [this.libro?.ejemplaresTotales ?? 1, [Validators.required, entero, Validators.min(1)]],
   });
 
   protected async guardar(): Promise<void> {
@@ -90,6 +91,9 @@ export class LibroDialog {
     const valores = this.form.getRawValue();
     const libro: Libro = {
       ...valores,
+      titulo: valores.titulo.trim(),
+      autor: valores.autor.trim(),
+      editorial: valores.editorial.trim(),
       id: this.libro?.id,
       ejemplaresDisponibles: this.libro?.ejemplaresDisponibles ?? valores.ejemplaresTotales,
     };

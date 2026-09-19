@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { BibliotecaService } from '../../core/biblioteca.service';
 import { NotificacionesService } from '../../core/notificaciones.service';
 import { Socio, TipoSocio } from '../../core/models';
+import { requeridoSinEspacios } from '../../core/validadores';
 
 /** Alta y edición de socios. El código y la fecha de alta se asignan automáticamente. */
 @Component({
@@ -61,7 +62,7 @@ export class SocioDialog {
   protected guardando = false;
 
   protected readonly form = this.fb.nonNullable.group({
-    nombre: [this.socio?.nombre ?? '', Validators.required],
+    nombre: [this.socio?.nombre ?? '', requeridoSinEspacios],
     email: [this.socio?.email ?? '', [Validators.required, Validators.email]],
     telefono: [this.socio?.telefono ?? '', Validators.pattern(/^\d{10}$/)],
     tipo: [(this.socio?.tipo ?? 'estudiante') as TipoSocio, Validators.required],
@@ -77,6 +78,8 @@ export class SocioDialog {
       id: this.socio?.id,
       ...this.form.getRawValue(),
     };
+    socio.nombre = socio.nombre.trim();
+    socio.email = socio.email.trim();
     const id = await this.notificaciones.ejecutar(
       () => this.servicio.guardarSocio(socio),
       this.socio ? 'Socio actualizado.' : 'Socio registrado.',
