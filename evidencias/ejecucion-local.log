@@ -7,8 +7,8 @@ $ npm --version
 $ git clone https://github.com/sergiocaballeroo/tarea2-ia-ui.git
 Cloning into 'tarea2-ia-ui'...
 
-$ npm install  (28 s)
-added 414 packages, and audited 415 packages in 27s
+$ npm install  (37 s)
+added 414 packages, and audited 415 packages in 37s
 
 102 packages are looking for funding
   run `npm fund` for details
@@ -17,7 +17,7 @@ found 0 vulnerabilities
 
 $ npm run start:biblioteca
 > tarea2-ia-ui@0.0.0 start:biblioteca
-> ng serve biblioteca --open --no-open
+> ng serve biblioteca
 
 [33m❯[39m Building...
 [32m✔[39m Building...
@@ -29,16 +29,16 @@ $ npm run start:biblioteca
 [1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m46.62 kB[22m
 
 [1mLazy chunk files[22m   [2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
-[32mchunk-55GVNPYP.js[39m  [2m | [22m[2mprestamos[22m    [2m | [22m[36m43.43 kB[39m[2m | [22m
-[32mchunk-4XDNF3LX.js[39m  [2m | [22m[2mlibros[22m       [2m | [22m[36m38.69 kB[39m[2m | [22m
-[32mchunk-HJT2WUPP.js[39m  [2m | [22m[2msocios[22m       [2m | [22m[36m36.08 kB[39m[2m | [22m
-[32mchunk-C2QT7Z5I.js[39m  [2m | [22m[2mdashboard[22m    [2m | [22m[36m19.85 kB[39m[2m | [22m
-[32mchunk-CYL4ZOLK.js[39m  [2m | [22m[2mvencidos[22m     [2m | [22m[36m18.52 kB[39m[2m | [22m
-[32mchunk-3MTGV7T7.js[39m  [2m | [22m[2majustes[22m      [2m | [22m[36m16.39 kB[39m[2m | [22m
+[32mchunk-DABQ4P6V.js[39m  [2m | [22m[2mprestamos[22m    [2m | [22m[36m43.43 kB[39m[2m | [22m
+[32mchunk-FUFBSJZC.js[39m  [2m | [22m[2mlibros[22m       [2m | [22m[36m38.69 kB[39m[2m | [22m
+[32mchunk-RR3BATNH.js[39m  [2m | [22m[2msocios[22m       [2m | [22m[36m36.08 kB[39m[2m | [22m
+[32mchunk-2WFB6VCH.js[39m  [2m | [22m[2mdashboard[22m    [2m | [22m[36m19.85 kB[39m[2m | [22m
+[32mchunk-IVBTEXFD.js[39m  [2m | [22m[2mvencidos[22m     [2m | [22m[36m18.52 kB[39m[2m | [22m
+[32mchunk-DEGFVZTH.js[39m  [2m | [22m[2majustes[22m      [2m | [22m[36m16.39 kB[39m[2m | [22m
 [32mchunk-WJ5LPWX2.js[39m  [2m | [22m[2m-[22m            [2m | [22m [36m5.55 kB[39m[2m | [22m
 [32mchunk-54KXAWJC.js[39m  [2m | [22m[2m-[22m            [2m | [22m [36m1.36 kB[39m[2m | [22m
 
-Application bundle generation complete. [7.111 seconds] - 2026-09-19T01:17:00.620Z
+Application bundle generation complete. [8.230 seconds] - 2026-09-19T01:26:35.146Z
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.
@@ -46,7 +46,7 @@ NOTE: Raw file sizes do not reflect development server per-request transformatio
 
 $ npm run start:clinica
 > tarea2-ia-ui@0.0.0 start:clinica
-> ng serve clinica --port 4300 --open --no-open
+> ng serve clinica --port 4300
 
 [33m❯[39m Building...
 [32m✔[39m Building...
@@ -58,16 +58,16 @@ $ npm run start:clinica
 [1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m35.73 kB[22m
 
 [1mLazy chunk files[22m   [2m | [22m[1mNames[22m        [2m | [22m[1mRaw size[22m
-[32mchunk-44UYI3PJ.js[39m  [2m | [22m[2magendar[22m      [2m | [22m[36m47.12 kB[39m[2m | [22m
-[32mchunk-VXMKCT45.js[39m  [2m | [22m[2mrecepcion[22m    [2m | [22m[36m37.73 kB[39m[2m | [22m
-[32mchunk-OXV43N4Y.js[39m  [2m | [22m[2minicio[22m       [2m | [22m[36m17.40 kB[39m[2m | [22m
-[32mchunk-G7TEYQD6.js[39m  [2m | [22m[2mmis-citas[22m    [2m | [22m[36m17.39 kB[39m[2m | [22m
-[32mchunk-SKALCIUV.js[39m  [2m | [22m[2mcontacto[22m     [2m | [22m[36m13.94 kB[39m[2m | [22m
+[32mchunk-HNHXBZR7.js[39m  [2m | [22m[2magendar[22m      [2m | [22m[36m47.12 kB[39m[2m | [22m
+[32mchunk-OZTW74JM.js[39m  [2m | [22m[2mrecepcion[22m    [2m | [22m[36m37.73 kB[39m[2m | [22m
+[32mchunk-2JTQHDKB.js[39m  [2m | [22m[2minicio[22m       [2m | [22m[36m17.40 kB[39m[2m | [22m
+[32mchunk-5YC253DT.js[39m  [2m | [22m[2mmis-citas[22m    [2m | [22m[36m17.39 kB[39m[2m | [22m
+[32mchunk-7AQSMJSX.js[39m  [2m | [22m[2mcontacto[22m     [2m | [22m[36m13.94 kB[39m[2m | [22m
 [32mchunk-JWKL6PGS.js[39m  [2m | [22m[2m-[22m            [2m | [22m[36m13.16 kB[39m[2m | [22m
-[32mchunk-R6DANH3M.js[39m  [2m | [22m[2mservicios[22m    [2m | [22m [36m9.65 kB[39m[2m | [22m
-[32mchunk-SHVLUD3F.js[39m  [2m | [22m[2mequipo[22m       [2m | [22m [36m9.38 kB[39m[2m | [22m
+[32mchunk-JEKSXUL5.js[39m  [2m | [22m[2mservicios[22m    [2m | [22m [36m9.65 kB[39m[2m | [22m
+[32mchunk-V2GN526V.js[39m  [2m | [22m[2mequipo[22m       [2m | [22m [36m9.38 kB[39m[2m | [22m
 
-Application bundle generation complete. [5.822 seconds] - 2026-09-19T01:17:13.492Z
+Application bundle generation complete. [9.353 seconds] - 2026-09-19T01:26:49.472Z
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.

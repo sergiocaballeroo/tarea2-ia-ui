@@ -12,11 +12,13 @@ Salida: evidencias/capturas/e01..e06 (PNG) y evidencias/ejecucion-local.log (tex
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -27,10 +29,10 @@ LOG = RAIZ / "evidencias" / "ejecucion-local.log"
 REPO = "https://github.com/sergiocaballeroo/tarea2-ia-ui.git"
 PUERTO_BIB = 4200
 PUERTO_CLI = 4300
+CARPETA_BASE = r"C:\Users\sergi\Documents"
 
 ES_WINDOWS = os.name == "nt"
 NPM = "npm.cmd" if ES_WINDOWS else "npm"
-NPX = "npx.cmd" if ES_WINDOWS else "npx"
 
 
 def correr(cmd: list[str], cwd: Path, timeout: int = 900) -> str:
@@ -44,8 +46,6 @@ def servir(cmd: list[str], cwd: Path, puerto: int, espera: int = 60) -> tuple[su
     log = cwd / f"serve-{puerto}.log"
     f = open(log, "w", encoding="utf-8")
     proc = subprocess.Popen(cmd, cwd=cwd, stdout=f, stderr=subprocess.STDOUT)
-    import urllib.request
-
     for _ in range(espera):
         time.sleep(1)
         try:
@@ -59,26 +59,12 @@ def servir(cmd: list[str], cwd: Path, puerto: int, espera: int = 60) -> tuple[su
 
 
 def limpiar_ansi(texto: str) -> str:
-    import re
-
     texto = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", texto)
     return texto.replace("\r", "")
 
 
-def render_terminal(titulo: str, bloques: list[tuple[str, str]], destino: Path, ancho_cols: int = 100) -> None:
-    """Dibuja una ventana tipo terminal con pares (comando, salida). La salida es la real, sin editar."""
-    lineas: list[tuple[str, str]] = []
-    carpeta = "C:\\Users\\sergi\\Documents"
-    for cmd, out in bloques:
-        lineas.append(("cmd", f"PS {carpeta}> {cmd}"))
-        if cmd.startswith("cd "):
-            carpeta = carpeta + "\\" + cmd[3:].strip()
-        for l in limpiar_ansi(out).splitlines():
-            while len(l) > ancho_cols:
-                lineas.append(("out", l[:ancho_cols]))
-                l = l[ancho_cols:]
-            lineas.append(("out", l))
-        lineas.append(("out", ""))
+def cargar_fuentes():
+    """Fuente monoespaciada (Cascadia Mono o Consolas) y una de símbolos para glifos como el check."""
     fuente = fuente_b = None
     for regular, negrita in (("CascadiaMono.ttf", "CascadiaMono.ttf"), ("consola.ttf", "consolab.ttf")):
         try:
@@ -89,6 +75,29 @@ def render_terminal(titulo: str, bloques: list[tuple[str, str]], destino: Path, 
             continue
     if fuente is None:
         fuente = fuente_b = ImageFont.load_default()
+    try:
+        simbolos = ImageFont.truetype("seguisym.ttf", 15)
+    except OSError:
+        simbolos = fuente
+    return fuente, fuente_b, simbolos
+
+
+def render_terminal(titulo: str, bloques: list[tuple[str, str]], destino: Path, carpeta: str = CARPETA_BASE,
+                    ancho_cols: int = 100) -> None:
+    """Dibuja una ventana tipo terminal con pares (comando, salida). La salida es la real, sin editar."""
+    lineas: list[tuple[str, str]] = []
+    for cmd, out in bloques:
+        lineas.append(("cmd", f"PS {carpeta}> {cmd}"))
+        if cmd.startswith("cd "):
+            carpeta = carpeta + "\\" + cmd[3:].strip()
+        for l in limpiar_ansi(out).splitlines():
+            while len(l) > ancho_cols:
+                lineas.append(("out", l[:ancho_cols]))
+                l = l[ancho_cols:]
+            lineas.append(("out", l))
+        lineas.append(("out", ""))
+
+    fuente, fuente_b, simbolos = cargar_fuentes()
     alto_linea = 21
     ancho = 1000
     alto = 48 + alto_linea * len(lineas) + 24
@@ -99,7 +108,15 @@ def render_terminal(titulo: str, bloques: list[tuple[str, str]], destino: Path, 
     y = 48
     for tipo, l in lineas:
         color = (120, 220, 120) if tipo == "cmd" else (204, 204, 204)
-        d.text((14, y), l, fill=color, font=fuente_b if tipo == "cmd" else fuente)
+        f = fuente_b if tipo == "cmd" else fuente
+        if any(ord(c) > 0x2400 for c in l):
+            # Caracteres especiales (flechas, checks) con la fuente de símbolos, el resto con la monoespaciada.
+            x = 14.0
+            for c in l:
+                d.text((x, y), c, fill=color, font=simbolos if ord(c) > 0x2400 else f)
+                x += d.textlength(c, font=f)
+        else:
+            d.text((14, y), l, fill=color, font=f)
         y += alto_linea
     img.save(destino)
     print("Captura:", destino.name)
@@ -111,13 +128,10 @@ def main() -> None:
     print("Carpeta temporal:", tmp)
     registro: list[str] = []
 
-    # 1) Versiones
     node_v = correr(["node", "--version"], tmp)
     npm_v = correr([NPM, "--version"], tmp)
-    # 2) git clone
     out_clone = correr(["git", "clone", REPO], tmp)
     proyecto = tmp / "tarea2-ia-ui"
-    # 3) npm install
     t0 = time.time()
     out_install = correr([NPM, "install"], proyecto)
     dur_install = time.time() - t0
@@ -132,32 +146,37 @@ def main() -> None:
         SALIDA / "e01-clone-install.png",
     )
 
-    # 4) npm run start:biblioteca y start:clinica (no abren el navegador; se capturan con Playwright)
+    carpeta_proyecto = CARPETA_BASE + "\\tarea2-ia-ui"
     proc_b, out_b = servir([NPM, "run", "start:biblioteca"], proyecto, PUERTO_BIB)
     proc_c, out_c = servir([NPM, "run", "start:clinica"], proyecto, PUERTO_CLI)
     registro += [f"$ npm run start:biblioteca\n{out_b}", f"$ npm run start:clinica\n{out_c}"]
     render_terminal("Windows PowerShell: servidor de desarrollo de la biblioteca",
-                    [("npm run start:biblioteca", out_b)], SALIDA / "e02-start-biblioteca.png")
+                    [("npm run start:biblioteca", out_b)], SALIDA / "e02-start-biblioteca.png", carpeta_proyecto)
     render_terminal("Windows PowerShell: servidor de desarrollo de la clínica",
-                    [("npm run start:clinica", out_c)], SALIDA / "e03-start-clinica.png")
+                    [("npm run start:clinica", out_c)], SALIDA / "e03-start-clinica.png", carpeta_proyecto)
 
-    # 5) Capturas del navegador en localhost con Playwright (usa el Chromium del proyecto).
+    # Capturas del navegador en localhost con Playwright (usa el Chromium del proyecto).
+    rutas = {k: str(SALIDA / v).replace("\\", "/") for k, v in {
+        "b1": "e04-localhost-biblioteca.png",
+        "b2": "e05-localhost-biblioteca-prestamos.png",
+        "c1": "e06-localhost-clinica.png",
+    }.items()}
     guion = f"""
 import {{ chromium }} from 'playwright';
 const b = await chromium.launch();
 const p = await b.newPage({{ viewport: {{ width: 1366, height: 820 }} }});
 await p.goto('http://localhost:{PUERTO_BIB}/#/', {{ waitUntil: 'networkidle' }});
 await p.waitForTimeout(800);
-await p.screenshot({{ path: {str(SALIDA / 'e04-localhost-biblioteca.png')!r} }});
+await p.screenshot({{ path: '{rutas["b1"]}' }});
 await p.goto('http://localhost:{PUERTO_BIB}/#/ajustes', {{ waitUntil: 'networkidle' }});
 await p.getByRole('button', {{ name: /Cargar datos de demostración/ }}).click();
 await p.waitForTimeout(600);
 await p.goto('http://localhost:{PUERTO_BIB}/#/prestamos', {{ waitUntil: 'networkidle' }});
 await p.waitForTimeout(600);
-await p.screenshot({{ path: {str(SALIDA / 'e05-localhost-biblioteca-prestamos.png')!r} }});
+await p.screenshot({{ path: '{rutas["b2"]}' }});
 await p.goto('http://localhost:{PUERTO_CLI}/#/', {{ waitUntil: 'networkidle' }});
 await p.waitForTimeout(800);
-await p.screenshot({{ path: {str(SALIDA / 'e06-localhost-clinica.png')!r} }});
+await p.screenshot({{ path: '{rutas["c1"]}' }});
 await b.close();
 console.log('capturas de navegador listas');
 """
