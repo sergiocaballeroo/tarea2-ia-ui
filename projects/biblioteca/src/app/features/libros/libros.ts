@@ -99,8 +99,8 @@ import { LibroDialog } from './libro.dialog';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let l" class="col-acciones">
-              <button matIconButton matTooltip="Editar" (click)="abrir(l)"><mat-icon>edit</mat-icon></button>
-              <button matIconButton matTooltip="Eliminar" (click)="eliminar(l)"><mat-icon>delete</mat-icon></button>
+              <button matIconButton matTooltip="Editar" aria-label="Editar" (click)="abrir(l)"><mat-icon>edit</mat-icon></button>
+              <button matIconButton matTooltip="Eliminar" aria-label="Eliminar" (click)="eliminar(l)"><mat-icon>delete</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>

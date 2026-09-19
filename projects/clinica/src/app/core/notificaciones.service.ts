@@ -27,4 +27,16 @@ export class NotificacionesService {
       return undefined;
     }
   }
+
+  /** Como ejecutar, pero devuelve true/false según haya tenido éxito (útil cuando la acción no regresa valor). */
+  async intentar(accion: () => Promise<unknown>, mensajeExito?: string): Promise<boolean> {
+    try {
+      await accion();
+      if (mensajeExito) this.exito(mensajeExito);
+      return true;
+    } catch (e) {
+      this.error(e);
+      return false;
+    }
+  }
 }

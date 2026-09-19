@@ -92,8 +92,9 @@ export class BibliotecaService {
       await db.socios.put(socio);
       return socio.id;
     }
-    const total = await db.socios.count();
-    socio.codigo = `S-${String(total + 1).padStart(4, '0')}`;
+    // Siguiente número a partir del código más alto existente (contar filas repetiría códigos tras eliminar socios).
+    const codigos = (await db.socios.toArray()).map((s) => Number(s.codigo.replace(/\D/g, '')) || 0);
+    socio.codigo = `S-${String(Math.max(0, ...codigos) + 1).padStart(4, '0')}`;
     socio.fechaAlta = hoyISO();
     socio.activo = true;
     return db.socios.add(socio);
@@ -300,7 +301,8 @@ export class BibliotecaService {
 
     const hoy = hoyISO();
     await db.transaction('rw', db.libros, db.socios, db.prestamos, db.configuracion, async () => {
-      await db.configuracion.put(CONFIG_DEFAULT);
+      // Conserva las reglas que el usuario ya haya guardado.
+      if (!(await db.configuracion.get(1))) await db.configuracion.put(CONFIG_DEFAULT);
 
       const librosDemo: Libro[] = LIBROS_DEMO.map((l) => ({ ...l, ejemplaresDisponibles: l.ejemplaresTotales }));
       const libroIds = await db.libros.bulkAdd(librosDemo, { allKeys: true });

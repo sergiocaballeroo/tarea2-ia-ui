@@ -52,14 +52,14 @@ import { MEDICOS, especialidadDe, medicoDe } from '../../core/datos-clinica';
 
       <div class="filtros">
         <div class="navegacion-fecha">
-          <button matIconButton (click)="moverDia(-1)" matTooltip="Día anterior"><mat-icon>chevron_left</mat-icon></button>
+          <button matIconButton (click)="moverDia(-1)" matTooltip="Día anterior" aria-label="Día anterior"><mat-icon>chevron_left</mat-icon></button>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Fecha</mat-label>
             <input matInput [matDatepicker]="picker" [value]="fechaDate()" (dateChange)="fecha.set(aISO($event.value!))" readonly />
             <mat-datepicker-toggle matIconSuffix [for]="picker" />
             <mat-datepicker #picker />
           </mat-form-field>
-          <button matIconButton (click)="moverDia(1)" matTooltip="Día siguiente"><mat-icon>chevron_right</mat-icon></button>
+          <button matIconButton (click)="moverDia(1)" matTooltip="Día siguiente" aria-label="Día siguiente"><mat-icon>chevron_right</mat-icon></button>
           <button matButton (click)="fecha.set(hoy)">Hoy</button>
         </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -125,13 +125,13 @@ import { MEDICOS, especialidadDe, medicoDe } from '../../core/datos-clinica';
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let c" class="col-acciones">
               @if (c.estado === 'programada') {
-                <button matIconButton matTooltip="Confirmar" (click)="cambiar(c, 'confirmada')"><mat-icon>task_alt</mat-icon></button>
+                <button matIconButton matTooltip="Confirmar" aria-label="Confirmar" (click)="cambiar(c, 'confirmada')"><mat-icon>task_alt</mat-icon></button>
               }
               @if (c.estado === 'programada' || c.estado === 'confirmada') {
-                <button matIconButton matTooltip="Marcar atendida" (click)="cambiar(c, 'atendida')"><mat-icon>how_to_reg</mat-icon></button>
-                <button matIconButton matTooltip="Cancelar" (click)="cancelar(c)"><mat-icon>event_busy</mat-icon></button>
+                <button matIconButton matTooltip="Marcar atendida" aria-label="Marcar atendida" (click)="cambiar(c, 'atendida')"><mat-icon>how_to_reg</mat-icon></button>
+                <button matIconButton matTooltip="Cancelar" aria-label="Cancelar" (click)="cancelar(c)"><mat-icon>event_busy</mat-icon></button>
               }
-              <button matIconButton matTooltip="Agregar nota" (click)="nota(c)"><mat-icon>edit_note</mat-icon></button>
+              <button matIconButton matTooltip="Agregar nota" aria-label="Agregar nota" (click)="nota(c)"><mat-icon>edit_note</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>

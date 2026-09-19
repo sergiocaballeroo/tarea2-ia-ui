@@ -102,13 +102,27 @@ evidencias/            Bitácora de prompts usados con Claude Code y capturas de
 - Angular Service Worker (PWA)
 - Electron 44 + electron-builder (instaladores de escritorio)
 - GitHub Actions + GitHub Pages
-- Playwright (capturas automáticas para el reporte)
+- Playwright (capturas automáticas para el reporte y pruebas funcionales)
 
 ## Capturas automáticas
 
 ```bash
 npx playwright install chromium
 npm run capturas       # genera evidencias/capturas/*.png a partir de _site
+```
+
+## Pruebas funcionales (Playwright)
+
+Cincuenta pruebas de extremo a extremo recorren ambas aplicaciones en Chromium como lo haría una
+persona: alta y edición de libros y socios, reglas de préstamo (límite, vencidos, socio inactivo,
+sin ejemplares), devoluciones con multa, renovaciones, ajustes, respaldo JSON, exportación CSV,
+agenda de citas (horarios, ocupados, duplicados, cancelación), panel de recepción y vista móvil.
+Cada prueba usa un contexto nuevo del navegador, así que parte de una base de datos vacía.
+
+```bash
+npm run build:pages    # las pruebas usan el build de _site
+npm run pruebas        # imprime el resultado; deja evidencias/pruebas/resultado.md y capturas de las fallas
+PRUEBA=B19 npm run pruebas   # corre solo las pruebas cuyo nombre contenga ese texto
 ```
 
 ## Documentación por aplicación

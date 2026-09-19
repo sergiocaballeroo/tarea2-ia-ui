@@ -105,7 +105,7 @@ type Filtro = 'activos' | 'devueltos' | 'todos';
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let p" class="col-acciones">
               @if (p.estado === 'activo') {
-                <button matIconButton matTooltip="Renovar" (click)="renovar(p)" [disabled]="p.diasRetraso > 0">
+                <button matIconButton matTooltip="Renovar" aria-label="Renovar" (click)="renovar(p)" [disabled]="p.diasRetraso > 0">
                   <mat-icon>update</mat-icon>
                 </button>
                 <button matButton="tonal" (click)="devolver(p)">

@@ -100,8 +100,8 @@ export class MisCitas {
 
   protected async cancelar(c: Cita): Promise<void> {
     if (!confirm(`¿Cancelar la cita ${c.folio} del ${c.fecha} a las ${c.hora}?`)) return;
-    const ok = await this.notificaciones.ejecutar(() => this.servicio.cancelar(c.id!), 'Tu cita fue cancelada.');
-    if (ok !== undefined) this.cita.set({ ...c, estado: 'cancelada' });
+    const ok = await this.notificaciones.intentar(() => this.servicio.cancelar(c.id!), 'Tu cita fue cancelada.');
+    if (ok) this.cita.set({ ...c, estado: 'cancelada', notas: 'Cancelada por el paciente' });
   }
 
   protected especialidad = (id: string) => especialidadDe(id)?.nombre ?? '';

@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
 import { BibliotecaService } from '../../core/biblioteca.service';
 import { NotificacionesService } from '../../core/notificaciones.service';
@@ -92,7 +92,7 @@ import { SocioDialog } from './socio.dialog';
           <ng-container matColumnDef="activo">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let s">
-              <mat-slide-toggle [checked]="s.activo" (change)="cambiarEstado(s, $event.checked)" [matTooltip]="s.activo ? 'Desactivar' : 'Activar'">
+              <mat-slide-toggle [checked]="s.activo" (change)="cambiarEstado(s, $event)" [matTooltip]="s.activo ? 'Desactivar' : 'Activar'">
                 {{ s.activo ? 'Activo' : 'Inactivo' }}
               </mat-slide-toggle>
             </td>
@@ -100,8 +100,8 @@ import { SocioDialog } from './socio.dialog';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let s" class="col-acciones">
-              <button matIconButton matTooltip="Editar" (click)="abrir(s)"><mat-icon>edit</mat-icon></button>
-              <button matIconButton matTooltip="Eliminar" (click)="eliminar(s)"><mat-icon>delete</mat-icon></button>
+              <button matIconButton matTooltip="Editar" aria-label="Editar" (click)="abrir(s)"><mat-icon>edit</mat-icon></button>
+              <button matIconButton matTooltip="Eliminar" aria-label="Eliminar" (click)="eliminar(s)"><mat-icon>delete</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="columnas"></tr>
@@ -153,11 +153,14 @@ export class Socios {
     this.dialog.open(SocioDialog, { data: socio ?? null, autoFocus: 'first-tabbable' });
   }
 
-  protected async cambiarEstado(socio: Socio, activo: boolean): Promise<void> {
-    await this.notificaciones.ejecutar(
+  protected async cambiarEstado(socio: Socio, evento: MatSlideToggleChange): Promise<void> {
+    const activo = evento.checked;
+    const ok = await this.notificaciones.intentar(
       () => this.servicio.cambiarEstadoSocio(socio.id!, activo),
       activo ? 'Socio activado.' : 'Socio desactivado.',
     );
+    // Si la regla de negocio lo impidió, el interruptor vuelve al estado real del socio.
+    if (!ok) evento.source.checked = socio.activo;
   }
 
   protected async eliminar(socio: Socio): Promise<void> {
