@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve biblioteca --open",
+    "start": "ng serve biblioteca",
     "build": "ng build biblioteca && ng build clinica",
-    "start:biblioteca": "ng serve biblioteca --open",
-    "start:clinica": "ng serve clinica --port 4300 --open",
+    "start:biblioteca": "ng serve biblioteca",
+    "start:clinica": "ng serve clinica --port 4300",
     "build:pages": "ng build biblioteca --base-href /tarea2-ia-ui/biblioteca/ && ng build clinica --base-href /tarea2-ia-ui/clinica/ && node scripts/ensamblar-pages.mjs",
     "preview": "node scripts/servir-local.mjs",
     "capturas": "node scripts/capturas.mjs"

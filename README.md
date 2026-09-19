@@ -31,10 +31,10 @@ cd tarea2-ia-ui
 npm install
 
 # Biblioteca (abre http://localhost:4200)
-npm run start:biblioteca
+npm run start:biblioteca   # luego abre http://localhost:4200
 
 # Clínica (abre http://localhost:4300)
-npm run start:clinica
+npm run start:clinica      # luego abre http://localhost:4300
 ```
 
 ## Compilar y previsualizar tal como queda en GitHub Pages
