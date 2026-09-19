@@ -11,6 +11,14 @@ y construidas con **Angular 21 + Angular Material**. Ambas se publican automáti
 
 Portada con enlaces a ambas: https://sergiocaballeroo.github.io/tarea2-ia-ui/
 
+## Tres formas de ver las aplicaciones
+
+1. **Sin instalar nada:** abre https://sergiocaballeroo.github.io/tarea2-ia-ui/ en cualquier navegador.
+   Desde ahí entras a la biblioteca y a la clínica; se publican automáticamente con GitHub Actions.
+2. **Instalador de escritorio de la biblioteca (sin Node ni Git):** descarga el `.exe`, `.dmg` o
+   `.AppImage` desde https://github.com/sergiocaballeroo/tarea2-ia-ui/releases y ábrelo.
+3. **Desde el código fuente con Node.js:** sigue las secciones siguientes (`npm install` y `npm run start:...`).
+
 ## Requisitos para ejecutar en cualquier sistema operativo
 
 Solo se necesita **Node.js 20.19 o superior** (probado con Node 22) y **npm**. Funciona igual en
